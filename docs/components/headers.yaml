@@ -1,0 +1,87 @@
+X-Correlation-Id:
+  description: >-
+    Correlation identifier for the multi-service request chain a single
+    citizen-initiated action produces (API_SPECIFICATION.md Section 1.14).
+    Client-suppliable on the request; generated at the API Gateway when
+    absent and echoed back on the response, then propagated through every
+    internal service call and queue-job payload for that action
+    (ARCHITECTURE.md Section 15). Present in every audit record captured
+    per 10-Audit-APIs.md Section 10.1.3.
+  required: false
+  schema:
+    type: string
+    example: corr_1a4b7e20
+
+X-Request-Id:
+  description: >-
+    Unique identifier for this single HTTP request/response pair
+    (API_SPECIFICATION.md Section 1.15). Always server-generated, never
+    client-supplied. Distinct from X-Correlation-Id, which can span many
+    requests/jobs across services. Present in every structured log line and
+    every response, success or error (12-Standard-Response-Formats.md
+    Section 12.1).
+  required: false
+  schema:
+    type: string
+    example: req_9f2c4a1b
+
+X-Tenant-Id:
+  description: >-
+    Gateway-populated header carrying the tenantId claim already resolved
+    from the caller's JWT (API_SPECIFICATION.md Section 1.1;
+    ARCHITECTURE.md Section 11.2 RBAC Model), forwarded by the API Gateway
+    to downstream services for internal service-to-service propagation
+    (ARCHITECTURE.md Section 4.1). Never accepted as a client-supplied
+    override of the JWT's own tenantId claim - tenant scoping remains
+    exclusively JWT-derived per API_SPECIFICATION.md Section 1.1, with the
+    sole documented exception being the Super Admin cross-tenant `tenantId`
+    query parameter on specifically documented endpoints.
+  required: false
+  schema:
+    type: string
+    example: tmbm
+
+Accept-Language:
+  description: >-
+    BCP-47 language tag (`ta` or `en` at Phase-1) driving the language of
+    human-readable labels in the response - status label, category name,
+    rendered template text (API_SPECIFICATION.md Section 1.13). Resolved
+    against reference_value_translation (DATABASE_DESIGN.md Section 29).
+    Machine-readable fields (code, id, enum values) are never translated.
+    Defaults to the tenant's configured default language when absent.
+  required: false
+  schema:
+    type: string
+    enum:
+      - ta
+      - en
+    example: en
+
+If-Match:
+  description: >-
+    Optimistic-concurrency precondition carrying the caller's last-known
+    resource version, required on the specific endpoints documented as
+    concurrency-guarded (08-Notification-APIs.md Sections 8.7.4, 8.8.2,
+    8.13.4, 8.14.3; 09-Reports-APIs.md Sections 9.11.4, 9.12.4). A mismatch
+    against the resource's current version returns 409 Conflict with
+    error.code `CONCURRENT_MODIFICATION` rather than silently overwriting a
+    concurrent change (13-HTTP-Status-Codes.md Section 13.4.9).
+  required: false
+  schema:
+    type: string
+    example: "3"
+
+Idempotency-Key:
+  description: >-
+    Client-generated UUID protecting a POST that creates a citizen-visible
+    or otherwise consequential resource from duplicate submission on retry
+    (API_SPECIFICATION.md Section 1.5). The server persists a short-lived
+    key-to-response mapping (Redis, ARCHITECTURE.md Section 16) and replays
+    the original response for a repeated key within its 24-hour TTL instead
+    of creating a duplicate. Documented per-endpoint throughout Sections 2,
+    4, 8, 9, and 11 wherever supported.
+  required: false
+  schema:
+    type: string
+    format: uuid
+    example: 8f14e1a2-0000-4000-8000-000000000001

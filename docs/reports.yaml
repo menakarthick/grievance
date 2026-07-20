@@ -1,0 +1,1981 @@
+/api/v1/reports/dashboard/executive:
+  get:
+    operationId: reportGetExecutiveDashboard
+    tags: [Reports]
+    summary: Get Executive Dashboard
+    description: >-
+      Role-aware composite dashboard (widget set + KPI summary) for the
+      Officer/Admin Portal home screen. 09-Reports-APIs.md Section 9.2.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/periodStart'
+      - $ref: './components/parameters.yaml#/periodEnd'
+    responses:
+      '200':
+        description: Executive dashboard.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        widgets:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/Widget'
+                        kpis:
+                          type: array
+                          items:
+                            $ref: './components/schemas.yaml#/ReportSummary'
+                        generatedAt: { type: string, format: date-time }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/dashboard/widgets/{widgetKey}:
+  parameters:
+    - name: widgetKey
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: reportGetDashboardWidget
+    tags: [Reports]
+    summary: Get Dashboard Widget Data
+    description: >-
+      Retrieve a single widget's data in isolation, for a client that
+      renders widgets independently/lazily. 09-Reports-APIs.md Section
+      9.2.2.
+    parameters:
+      - $ref: './components/parameters.yaml#/periodStart'
+      - $ref: './components/parameters.yaml#/periodEnd'
+    responses:
+      '200':
+        description: Widget data.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Widget'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/reports/dashboard/widgets:
+  get:
+    operationId: reportListDashboardWidgets
+    tags: [Reports]
+    summary: List Available Widgets
+    description: >-
+      Retrieve the catalog of widgets the caller's role is permitted to
+      view, for a customizable dashboard layout builder.
+      09-Reports-APIs.md Section 9.2.3.
+    responses:
+      '200':
+        description: Widget catalog.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/WidgetCatalogEntry'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+
+/api/v1/reports/kpis:
+  get:
+    operationId: reportGetKpiSummary
+    tags: [Reports]
+    summary: Get KPI Summary
+    description: >-
+      Retrieve just the KPI tile values (no chart payloads), for a
+      lightweight summary strip. 09-Reports-APIs.md Section 9.2.4.
+    parameters:
+      - $ref: './components/parameters.yaml#/periodStart'
+      - $ref: './components/parameters.yaml#/periodEnd'
+    responses:
+      '200':
+        description: KPI summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        kpis:
+                          type: array
+                          items:
+                            $ref: './components/schemas.yaml#/ReportSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/complaints/summary:
+  get:
+    operationId: reportGetComplaintSummary
+    tags: [Reports]
+    summary: Complaint Summary Report
+    description: >-
+      Per-department/category/ward complaint counts by status for a
+      period. 09-Reports-APIs.md Section 9.3.1.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/departmentId'
+      - $ref: './components/parameters.yaml#/wardId'
+      - $ref: './components/parameters.yaml#/sort'
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Complaint summary rows.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ComplaintSummaryReportRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/complaints/trend:
+  get:
+    operationId: reportGetComplaintTrend
+    tags: [Reports]
+    summary: Complaint Trend Report
+    description: >-
+      Time-series complaint volume/resolution trend for line-chart
+      rendering. 09-Reports-APIs.md Section 9.3.2.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: granularity
+        in: query
+        schema: { type: string, enum: [daily, weekly, monthly], default: daily }
+      - $ref: './components/parameters.yaml#/departmentId'
+    responses:
+      '200':
+        description: Complaint trend series.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TrendChart'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/complaints/category-breakdown:
+  get:
+    operationId: reportGetCategoryBreakdown
+    tags: [Reports]
+    summary: Complaint Category Breakdown Report
+    description: >-
+      Category-wise share of complaint volume, for pie/donut-chart
+      rendering. 09-Reports-APIs.md Section 9.3.3.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/departmentId'
+    responses:
+      '200':
+        description: Category breakdown chart.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CategoryBreakdownChart'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/complaints/summary/drill-down:
+  get:
+    operationId: reportGetComplaintSummaryDrillDown
+    tags: [Reports]
+    summary: Complaint Drill-Down
+    description: >-
+      Drill-through from a Complaint Summary Report row to the
+      underlying list of individual complaints - the same underlying
+      query as GET /complaints (API_SPECIFICATION.md Section 4.8) with a
+      report-context wrapper. 09-Reports-APIs.md Section 9.3.4.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/departmentId'
+      - name: categoryId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/wardId'
+      - name: statusId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    responses:
+      '200':
+        description: Complaint list, identical shape to the Complaint List endpoint.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: './components/schemas.yaml#/ComplaintSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/sla/compliance:
+  get:
+    operationId: reportGetSlaCompliance
+    tags: [Reports]
+    summary: SLA Compliance Report
+    description: >-
+      Percentage of complaints resolved within their pinned SLA window,
+      per department/category. Compliance is computed against each
+      complaint's originally-pinned sla_rule_config version, never
+      against whatever SLA rule is active today. 09-Reports-APIs.md
+      Section 9.4.1.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/departmentId'
+      - name: categoryId
+        in: query
+        schema: { type: string }
+    responses:
+      '200':
+        description: SLA compliance rows.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/SlaComplianceRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/sla/breach:
+  get:
+    operationId: reportGetSlaBreach
+    tags: [Reports]
+    summary: SLA Breach Report
+    description: >-
+      List of complaints that breached their SLA within a period, for
+      triage and escalation review. 09-Reports-APIs.md Section 9.4.2.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/departmentId'
+      - name: sort
+        in: query
+        schema: { type: string, default: '-breachedAt' }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    responses:
+      '200':
+        description: SLA breach rows.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/SlaBreachRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/sla/trend:
+  get:
+    operationId: reportGetSlaTrend
+    tags: [Reports]
+    summary: SLA Trend Report
+    description: >-
+      Time-series SLA compliance rate, for line-chart rendering.
+      09-Reports-APIs.md Section 9.4.3.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: granularity
+        in: query
+        schema: { type: string, enum: [weekly, monthly] }
+      - $ref: './components/parameters.yaml#/departmentId'
+    responses:
+      '200':
+        description: SLA trend series.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TrendChart'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/officer-performance:
+  get:
+    operationId: reportGetOfficerPerformance
+    tags: [Reports]
+    summary: Officer Performance Report
+    description: >-
+      Per-officer weekly assigned/resolved/pending/overdue counts. An
+      Officer caller may only request their own officerId.
+      09-Reports-APIs.md Section 9.5.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/officerId'
+      - name: weekStartDate
+        in: query
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        description: Officer performance summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OfficerPerformanceRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/officer-performance/leaderboard:
+  get:
+    operationId: reportGetOfficerLeaderboard
+    tags: [Reports]
+    summary: Officer Leaderboard Report
+    description: >-
+      Rank officers within a department by resolution count/SLA
+      compliance, for a recognition/performance-management view. Ties
+      are broken deterministically by officerId for a stable order.
+      09-Reports-APIs.md Section 9.5.2.
+    parameters:
+      - $ref: './components/parameters.yaml#/departmentId'
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: sort
+        in: query
+        schema: { type: string, default: '-resolvedCount' }
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+    responses:
+      '200':
+        description: Officer leaderboard rows.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/OfficerLeaderboardRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/officer-performance/{officerId}/drill-down:
+  parameters:
+    - name: officerId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: reportGetOfficerDrillDown
+    tags: [Reports]
+    summary: Officer Drill-Down
+    description: >-
+      Drill-through from an officer's summary/leaderboard row to their
+      individual assigned-complaint list. 09-Reports-APIs.md Section
+      9.5.3.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: statusId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    responses:
+      '200':
+        description: Officer's assigned-complaint list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/OfficerDrillDownItem'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/reports/department-performance:
+  get:
+    operationId: reportGetDepartmentPerformance
+    tags: [Reports]
+    summary: Department Performance Report
+    description: >-
+      Department-level registered/resolved/SLA-breach-rate rollup over a
+      period. 09-Reports-APIs.md Section 9.6.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/departmentId'
+      - $ref: './components/parameters.yaml#/periodStart'
+      - $ref: './components/parameters.yaml#/periodEnd'
+    responses:
+      '200':
+        description: Department performance summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/DepartmentPerformanceRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/department-performance/comparison:
+  get:
+    operationId: reportGetDepartmentComparison
+    tags: [Reports]
+    summary: Department Comparison Report
+    description: >-
+      Side-by-side comparison of every department's key metrics for a
+      period, for bar-chart rendering. Tenant-wide only - a Department
+      Admin cannot compare across departments outside their own (403).
+      09-Reports-APIs.md Section 9.6.2.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: metricKey
+        in: query
+        schema:
+          type: string
+          enum: [registeredCount, resolvedCount, breachRatePercent, avgResolutionHours]
+    responses:
+      '200':
+        description: Department comparison chart.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/DepartmentComparisonChart'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/department-performance/{departmentId}/drill-down:
+  parameters:
+    - name: departmentId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: reportGetDepartmentDrillDown
+    tags: [Reports]
+    summary: Department Drill-Down
+    description: >-
+      Drill-through from a department's summary row to its complaint
+      list. 09-Reports-APIs.md Section 9.6.3.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: statusId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    responses:
+      '200':
+        description: Department's complaint list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: './components/schemas.yaml#/ComplaintSummary'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/reports/ai-analytics/predictions:
+  get:
+    operationId: reportGetAiPredictions
+    tags: [Reports]
+    summary: AI Prediction Report
+    description: >-
+      Structured view of Analytics Agent trend predictions (complaint
+      volume forecast, category forecast). Falls back to an empty/
+      unavailable result set (not an error) if the AI Orchestration
+      Service is degraded, per ARCHITECTURE.md Section 8.3.
+      09-Reports-APIs.md Section 9.7.1.
+    parameters:
+      - name: scope
+        in: query
+        schema: { type: string, enum: [department, district, tenant] }
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        description: AI prediction rows.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/AiPredictionRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/ai-analytics/classification-accuracy:
+  get:
+    operationId: reportGetAiClassificationAccuracy
+    tags: [Reports]
+    summary: AI Classification Accuracy Report
+    description: >-
+      How often the Complaint Agent's category/priority/department
+      classification was subsequently overridden by an Officer/Admin, as
+      a model-quality signal. Aggregate-only response - no individual
+      complaint content. 09-Reports-APIs.md Section 9.7.2.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/departmentId'
+    responses:
+      '200':
+        description: AI classification accuracy summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/AiClassificationAccuracy'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/citizen-service/satisfaction:
+  get:
+    operationId: reportGetCitizenSatisfaction
+    tags: [Reports]
+    summary: Citizen Satisfaction Report
+    description: >-
+      Average feedback rating and comment-sentiment summary per
+      department/category. Excludes complaints with no submitted
+      feedback from the average rather than treating them as zero.
+      09-Reports-APIs.md Section 9.8.1.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/departmentId'
+    responses:
+      '200':
+        description: Citizen satisfaction rows.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/CitizenSatisfactionRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/citizen-service/engagement:
+  get:
+    operationId: reportGetCitizenEngagement
+    tags: [Reports]
+    summary: Citizen Engagement Report
+    description: >-
+      Registration, repeat-complaint, and feedback-submission-rate
+      metrics, for citizen-adoption tracking. Aggregate-only response -
+      no individual citizen identity in results. 09-Reports-APIs.md
+      Section 9.8.2.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        description: Citizen engagement summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CitizenEngagementSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/citizen-service/channel-usage:
+  get:
+    operationId: reportGetChannelUsage
+    tags: [Reports]
+    summary: Channel Usage Report
+    description: >-
+      Complaint registration channel mix (text/voice) and notification
+      channel delivery mix, for capacity/provider planning.
+      09-Reports-APIs.md Section 9.8.3.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        description: Channel usage summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ChannelUsageSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/reports/geographic/ward-wise:
+  get:
+    operationId: reportGetWardWise
+    tags: [Reports]
+    summary: Ward-Wise Complaint Report
+    description: >-
+      Tabular per-ward complaint count/category breakdown for a period.
+      Sourced from geo_analytics_snapshot, not a live spatial query.
+      09-Reports-APIs.md Section 9.9.1.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/zoneId'
+      - name: sort
+        in: query
+        schema: { type: string, default: '-complaintCount' }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Ward-wise complaint rows.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/WardWiseRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/reports/geographic/zone-wise:
+  get:
+    operationId: reportGetZoneWise
+    tags: [Reports]
+    summary: Zone-Wise Complaint Report
+    description: >-
+      Tabular per-zone complaint count/category breakdown for a period.
+      Sourced from geo_analytics_snapshot, aggregated up one level from
+      Ward. 09-Reports-APIs.md Section 9.9.2.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: districtId
+        in: query
+        schema: { type: string }
+      - name: sort
+        in: query
+        schema: { type: string, default: '-complaintCount' }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Zone-wise complaint rows.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ZoneWiseRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/reports/export:
+  get:
+    operationId: reportExport
+    tags: [Reports]
+    summary: Export Report
+    description: >-
+      Export any report in Sections 9.2-9.9 as PDF, Excel, or CSV. Large
+      exports are generated asynchronously via the Scheduler; the
+      resulting artifact is a file_asset, retrieved via Download Export.
+      09-Reports-APIs.md Section 9.10.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      - name: reportType
+        in: query
+        required: true
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/reportFormat'
+    responses:
+      '202':
+        description: Export job queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: './components/schemas.yaml#/AsyncJob'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+
+/api/v1/reports/export/{exportJobId}:
+  parameters:
+    - name: exportJobId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: reportGetExportStatus
+    tags: [Reports]
+    summary: Get Export Job Status
+    description: >-
+      Poll the status of an asynchronous report export job.
+      09-Reports-APIs.md Section 9.10.2.
+    responses:
+      '200':
+        description: Export job status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: './components/schemas.yaml#/ReportExport'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/reports/export/{exportJobId}/download:
+  parameters:
+    - name: exportJobId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: reportDownloadExport
+    tags: [Reports]
+    summary: Download Export
+    description: >-
+      Retrieve the completed export artifact via a short-lived, signed
+      URL. Delegates entirely to the File Download endpoint once the
+      underlying fileAssetId is resolved. 09-Reports-APIs.md Section
+      9.10.3.
+    responses:
+      '302':
+        description: Redirect to a signed download URL.
+      '200':
+        description: JSON signed-URL response (when Accept is application/json).
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        downloadUrl: { type: string }
+                        expiresAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: EXPORT_NOT_YET_COMPLETE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/report-schedules:
+  get:
+    operationId: reportListSchedules
+    tags: [Reports]
+    summary: List Scheduled Reports
+    description: >-
+      Retrieve the tenant's configured recurring report schedules.
+      09-Reports-APIs.md Section 9.11.1.
+    parameters:
+      - name: reportType
+        in: query
+        schema: { type: string }
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Scheduled report list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ReportSchedule'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+  post:
+    operationId: reportCreateSchedule
+    tags: [Reports]
+    summary: Create Scheduled Report
+    description: >-
+      Define a new recurring report generation + email-delivery
+      schedule. The Scheduler picks up active schedules and internally
+      invokes the Export Report pipeline, then dispatches the resulting
+      artifact via the Email channel. 09-Reports-APIs.md Section 9.11.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [reportType, cronExpression, format, recipientEmails]
+            properties:
+              reportType: { type: string }
+              filters: { type: object }
+              cronExpression: { type: string }
+              format: { type: string, enum: [csv, pdf, xlsx] }
+              recipientEmails:
+                type: array
+                items: { type: string, format: email }
+                minItems: 1
+                maxItems: 50
+    responses:
+      '201':
+        description: Scheduled report created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ReportSchedule'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: REPORT_TYPE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/report-schedules/{scheduleId}:
+  parameters:
+    - name: scheduleId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: reportGetSchedule
+    tags: [Reports]
+    summary: Get Scheduled Report
+    description: >-
+      Retrieve a single scheduled report's configuration.
+      09-Reports-APIs.md Section 9.11.3.
+    responses:
+      '200':
+        description: Scheduled report detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ReportScheduleDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: reportUpdateSchedule
+    tags: [Reports]
+    summary: Update Scheduled Report
+    description: >-
+      Change a schedule's cron expression, recipients, format, or active
+      state. Optimistic concurrency: a version mismatch returns 409
+      rather than silently overwriting a concurrent edit.
+      09-Reports-APIs.md Section 9.11.4.
+    parameters:
+      - $ref: '#/components/parameters/IfMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [expectedVersion]
+            properties:
+              cronExpression: { type: string }
+              recipientEmails:
+                type: array
+                items: { type: string, format: email }
+              format: { type: string, enum: [csv, pdf, xlsx] }
+              isActive: { type: boolean }
+              expectedVersion: { type: integer }
+    responses:
+      '200':
+        description: Scheduled report updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ReportScheduleDetail'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        $ref: './components/responses.yaml#/Conflict'
+  delete:
+    operationId: reportDeleteSchedule
+    tags: [Reports]
+    summary: Delete Scheduled Report (Deactivate)
+    description: >-
+      Soft-delete (deactivate) a scheduled report. A deactivated
+      schedule is excluded from the Scheduler's next run without
+      affecting reports already dispatched historically.
+      09-Reports-APIs.md Section 9.11.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/report-templates:
+  get:
+    operationId: reportListTemplates
+    tags: [Reports]
+    summary: List Report Templates
+    description: >-
+      Retrieve saved report templates (filter/column presets).
+      09-Reports-APIs.md Section 9.12.1.
+    parameters:
+      - name: reportType
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Report template list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ReportTemplateSummary'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+  post:
+    operationId: reportCreateTemplate
+    tags: [Reports]
+    summary: Create Report Template
+    description: >-
+      Save the current filter/column/sort configuration of a report as
+      a reusable named template. Private to its creator by default;
+      visibility to others is granted via Report Sharing.
+      09-Reports-APIs.md Section 9.12.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, reportType]
+            properties:
+              name: { type: string }
+              reportType: { type: string }
+              savedFilters: { type: object }
+              savedColumns:
+                type: array
+                items: { type: string }
+              savedSort: { type: string }
+    responses:
+      '201':
+        description: Report template created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ReportTemplateSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '409':
+        description: TEMPLATE_NAME_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/report-templates/{reportTemplateId}:
+  parameters:
+    - name: reportTemplateId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: reportGetTemplate
+    tags: [Reports]
+    summary: Get Report Template
+    description: >-
+      Retrieve a single saved report template. Access check covers both
+      ownership and share grants. 09-Reports-APIs.md Section 9.12.3.
+    responses:
+      '200':
+        description: Report template detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ReportTemplateDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: reportUpdateTemplate
+    tags: [Reports]
+    summary: Update Report Template
+    description: >-
+      Change a saved template's filters/columns/sort - creates a new
+      version. Creator-only write access - sharing grants read, never
+      write. Optimistic concurrency: version mismatch returns 409.
+      09-Reports-APIs.md Section 9.12.4.
+    parameters:
+      - $ref: '#/components/parameters/IfMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [expectedVersion]
+            properties:
+              savedFilters: { type: object }
+              savedColumns:
+                type: array
+                items: { type: string }
+              savedSort: { type: string }
+              expectedVersion: { type: integer }
+    responses:
+      '200':
+        description: Report template updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ReportTemplateDetail'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        $ref: './components/responses.yaml#/Conflict'
+  delete:
+    operationId: reportDeleteTemplate
+    tags: [Reports]
+    summary: Delete Report Template
+    description: >-
+      Remove a saved report template. Also revokes any outstanding
+      shares of this template. 09-Reports-APIs.md Section 9.12.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/reports/{reportInstanceId}/shares:
+  parameters:
+    - name: reportInstanceId
+      in: path
+      required: true
+      description: An exportJobId's resulting fileAssetId, or a reportTemplateId.
+      schema: { type: string }
+  post:
+    operationId: reportShareCreate
+    tags: [Reports]
+    summary: Share Report
+    description: >-
+      Grant another user (or a saved Report Template) access to a
+      completed report export or a saved template. Sharing never
+      bypasses the recipient's own RBAC scope for the underlying data,
+      and is never permitted across tenants, even for Super Admin.
+      09-Reports-APIs.md Section 9.13.1.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [sharedEntityType, grantedToUserId]
+            properties:
+              sharedEntityType: { type: string, enum: [file_asset, report_template] }
+              grantedToUserId: { type: string }
+              expiresAt: { type: string, format: date-time }
+    responses:
+      '201':
+        description: Share grant created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ReportShare'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  get:
+    operationId: reportShareList
+    tags: [Reports]
+    summary: List Report Shares
+    description: >-
+      Retrieve every outstanding share grant for a report export or
+      template. 09-Reports-APIs.md Section 9.13.2.
+    responses:
+      '200':
+        description: Report share list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ReportShareListItem'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/reports/{reportInstanceId}/shares/{shareId}:
+  parameters:
+    - name: reportInstanceId
+      in: path
+      required: true
+      schema: { type: string }
+    - name: shareId
+      in: path
+      required: true
+      schema: { type: string }
+  delete:
+    operationId: reportShareRevoke
+    tags: [Reports]
+    summary: Revoke Report Share
+    description: >-
+      Remove a previously granted share. Revocation takes effect
+      immediately - the recipient's next access attempt returns 403.
+      09-Reports-APIs.md Section 9.13.3.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/report-permissions:
+  get:
+    operationId: reportGetPermissionMatrix
+    tags: [Reports]
+    summary: Get Report Permission Matrix
+    description: >-
+      Retrieve which roles are granted which report-related permissions.
+      09-Reports-APIs.md Section 9.14.1.
+    parameters:
+      - name: roleId
+        in: query
+        schema: { type: string }
+    responses:
+      '200':
+        description: Report permission matrix.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ReportPermissionMatrixRow'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+  patch:
+    operationId: reportUpdatePermission
+    tags: [Reports]
+    summary: Update Report Permission
+    description: >-
+      Grant or revoke a report-related permission for a role. A thin
+      convenience wrapper equivalent to PATCH /api/v1/roles/{roleId}
+      scoped to report:* permissions - it does not introduce a second
+      permission-grant mechanism. Naturally idempotent.
+      09-Reports-APIs.md Section 9.14.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [roleId, permissionKey, action]
+            properties:
+              roleId: { type: string }
+              permissionKey: { type: string }
+              action: { type: string, enum: [grant, revoke] }
+    responses:
+      '200':
+        description: Permission grant/revoke result.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        roleId: { type: string }
+                        permissionKey: { type: string }
+                        granted: { type: boolean }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/reports/statistics/usage:
+  get:
+    operationId: reportGetUsageStatistics
+    tags: [Reports]
+    summary: Get Report Usage Statistics
+    description: >-
+      Which reports are run most frequently, by whom, for Reports Portal
+      usage analysis and capacity planning. 09-Reports-APIs.md Section
+      9.15.1.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: reportType
+        in: query
+        schema: { type: string }
+    responses:
+      '200':
+        description: Report usage statistics.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ReportUsageRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+components:
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: >-
+        Optional on the Export Report request to prevent duplicate
+        export jobs on client retry (09-Reports-APIs.md Section 9.10.1).
+      schema:
+        type: string
+    IfMatchHeader:
+      name: If-Match
+      in: header
+      required: true
+      description: >-
+        Optimistic-concurrency precondition carrying the caller's
+        last-known version, required on Update Scheduled Report and
+        Update Report Template (09-Reports-APIs.md Sections 9.11.4,
+        9.12.4).
+      schema:
+        type: string
+  schemas:
+    Widget:
+      type: object
+      properties:
+        widgetKey: { type: string }
+        chartType: { type: string, enum: [line, bar, pie, heatmap, table] }
+        data: {}
+        generatedAt: { type: string, format: date-time }
+    WidgetCatalogEntry:
+      type: object
+      properties:
+        widgetKey: { type: string }
+        title: { type: string }
+        chartType: { type: string, enum: [line, bar, pie, heatmap, table] }
+        requiredPermission: { type: string }
+    ComplaintSummaryReportRow:
+      type: object
+      properties:
+        departmentId: { type: string }
+        categoryId: { type: string }
+        wardId: { type: string }
+        registeredCount: { type: integer }
+        resolvedCount: { type: integer }
+        breachedCount: { type: integer }
+    TrendChart:
+      type: object
+      properties:
+        chartType: { type: string, enum: [line] }
+        series:
+          type: array
+          items:
+            type: object
+            properties:
+              seriesKey: { type: string }
+              points:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string, format: date }
+                    value: { type: number }
+    CategoryBreakdownChart:
+      type: object
+      properties:
+        chartType: { type: string, enum: [pie] }
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              categoryName: { type: string }
+              count: { type: integer }
+              percentOfTotal: { type: number }
+    SlaComplianceRow:
+      type: object
+      properties:
+        departmentId: { type: string }
+        categoryId: { type: string }
+        complianceRatePercent: { type: number }
+        totalComplaints: { type: integer }
+        compliantCount: { type: integer }
+    SlaBreachRow:
+      type: object
+      properties:
+        complaintId: { type: string }
+        trackingId: { type: string }
+        dueAt: { type: string, format: date-time }
+        breachedAt: { type: string, format: date-time }
+        escalatedTo: { type: [string, "null"] }
+    OfficerPerformanceRow:
+      type: object
+      properties:
+        officerId: { type: string }
+        weekStartDate: { type: string, format: date }
+        assignedCount: { type: integer }
+        resolvedCount: { type: integer }
+        overdueCount: { type: integer }
+    OfficerLeaderboardRow:
+      type: object
+      properties:
+        officerId: { type: string }
+        officerName: { type: string }
+        resolvedCount: { type: integer }
+        slaCompliancePercent: { type: number }
+        rank: { type: integer }
+    OfficerDrillDownItem:
+      type: object
+      properties:
+        id: { type: string }
+        trackingId: { type: string }
+        statusLabel: { type: string }
+        assignedAt: { type: string, format: date-time }
+        slaDueAt: { type: [string, "null"], format: date-time }
+    DepartmentPerformanceRow:
+      type: object
+      properties:
+        departmentId: { type: string }
+        registeredCount: { type: integer }
+        resolvedCount: { type: integer }
+        breachRatePercent: { type: number }
+        avgResolutionHours: { type: number }
+    DepartmentComparisonChart:
+      type: object
+      properties:
+        chartType: { type: string, enum: [bar] }
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              departmentName: { type: string }
+              value: { type: number }
+    AiPredictionRow:
+      type: object
+      properties:
+        metricKey: { type: string }
+        predictedValue: { type: number }
+        confidenceScore: { type: number, minimum: 0, maximum: 1 }
+        predictionDate: { type: string, format: date }
+    AiClassificationAccuracy:
+      type: object
+      properties:
+        totalClassified: { type: integer }
+        overriddenCount: { type: integer }
+        overrideRatePercent: { type: number }
+        averageConfidenceScore: { type: number, minimum: 0, maximum: 1 }
+    CitizenSatisfactionRow:
+      type: object
+      properties:
+        departmentId: { type: string }
+        averageRating: { type: number }
+        feedbackCount: { type: integer }
+        ratingDistribution:
+          type: object
+          properties:
+            '1': { type: integer }
+            '2': { type: integer }
+            '3': { type: integer }
+            '4': { type: integer }
+            '5': { type: integer }
+    CitizenEngagementSummary:
+      type: object
+      properties:
+        newRegistrations: { type: integer }
+        activeComplainants: { type: integer }
+        feedbackSubmissionRatePercent: { type: number }
+        reopenRatePercent: { type: number }
+    ChannelUsageSummary:
+      type: object
+      properties:
+        registrationChannels:
+          type: object
+          properties:
+            text: { type: integer }
+            voice: { type: integer }
+        notificationChannels:
+          type: object
+          properties:
+            sms: { type: integer }
+            email: { type: integer }
+            whatsapp: { type: integer }
+            push: { type: integer }
+    WardWiseRow:
+      type: object
+      properties:
+        wardId: { type: string }
+        wardName: { type: string }
+        complaintCount: { type: integer }
+        categoryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              categoryName: { type: string }
+              count: { type: integer }
+    ZoneWiseRow:
+      type: object
+      properties:
+        zoneId: { type: string }
+        zoneName: { type: string }
+        complaintCount: { type: integer }
+        categoryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              categoryName: { type: string }
+              count: { type: integer }
+    ReportSchedule:
+      type: object
+      properties:
+        id: { type: string }
+        reportType: { type: string }
+        cronExpression: { type: string }
+        format: { type: string, enum: [csv, pdf, xlsx] }
+        recipientEmails:
+          type: array
+          items: { type: string, format: email }
+        isActive: { type: boolean }
+        version: { type: integer }
+        createdAt: { type: string, format: date-time }
+    ReportScheduleDetail:
+      type: object
+      properties:
+        id: { type: string }
+        reportType: { type: string }
+        filters: { type: object }
+        cronExpression: { type: string }
+        format: { type: string, enum: [csv, pdf, xlsx] }
+        recipientEmails:
+          type: array
+          items: { type: string, format: email }
+        isActive: { type: boolean }
+        version: { type: integer }
+        lastRunAt: { type: [string, "null"], format: date-time }
+        nextRunAt: { type: [string, "null"], format: date-time }
+    ReportTemplateSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        reportType: { type: string }
+        createdBy: { type: string }
+        version: { type: integer }
+    ReportTemplateDetail:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        reportType: { type: string }
+        savedFilters: { type: object }
+        savedColumns:
+          type: array
+          items: { type: string }
+        savedSort: { type: string }
+        createdBy: { type: string }
+        version: { type: integer }
+    ReportShare:
+      type: object
+      properties:
+        shareId: { type: string }
+        sharedEntityType: { type: string, enum: [file_asset, report_template] }
+        sharedEntityId: { type: string }
+        grantedToUserId: { type: string }
+        expiresAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+    ReportShareListItem:
+      type: object
+      properties:
+        shareId: { type: string }
+        grantedToUserId: { type: string }
+        grantedToName: { type: string }
+        expiresAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+    ReportPermissionMatrixRow:
+      type: object
+      properties:
+        roleId: { type: string }
+        roleName: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+    ReportUsageRow:
+      type: object
+      properties:
+        reportType: { type: string }
+        runCount: { type: integer }
+        uniqueUserCount: { type: integer }
+        averageResponseTimeMs: { type: number }

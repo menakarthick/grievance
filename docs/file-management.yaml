@@ -1,0 +1,1385 @@
+/api/v1/files:
+  post:
+    operationId: fileUpload
+    tags: [File]
+    summary: Upload File
+    description: >-
+      Generic file-upload entry point for any feature area (complaint
+      image, voice recording, officer evidence document, AI-generated
+      report). File is not query/downloadable until virusScanStatus
+      becomes clean. 11-File-Management-APIs.md Section 11.1.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+    requestBody:
+      $ref: './components/requestBodies.yaml#/FileUploadMultipart'
+    responses:
+      '202':
+        description: File accepted for validation/virus-scan pipeline.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/FileUploadAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '413':
+        description: FILE_TOO_LARGE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '415':
+        description: UNSUPPORTED_MEDIA_TYPE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: MAX_FILES_EXCEEDED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/files/multipart:
+  post:
+    operationId: fileInitiateMultipartUpload
+    tags: [File]
+    summary: Initiate Chunked/Multipart Upload
+    description: >-
+      Begin a chunked upload session for large files (video, long voice
+      recordings) that exceed a single-request size ceiling. The
+      session is abandoned if not completed within expiresAt.
+      11-File-Management-APIs.md Section 11.1.2.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [fileName, mimeType, totalSizeBytes, assetCategory]
+            properties:
+              fileName: { type: string }
+              mimeType: { type: string }
+              totalSizeBytes: { type: integer }
+              assetCategory: { type: string }
+              linkedEntityType: { type: string }
+              linkedEntityId: { type: string }
+    responses:
+      '201':
+        description: Multipart upload session created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/MultipartUploadSession'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '413':
+        description: FILE_TOO_LARGE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '415':
+        description: UNSUPPORTED_MEDIA_TYPE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/multipart/{multipartUploadId}/complete:
+  parameters:
+    - name: multipartUploadId
+      in: path
+      required: true
+      schema: { type: string }
+  post:
+    operationId: fileCompleteMultipartUpload
+    tags: [File]
+    summary: Complete Chunked/Multipart Upload
+    description: >-
+      Finalize a chunked upload session, triggering the standard
+      validation pipeline on the fully reassembled file. Naturally
+      idempotent - completing an already-completed session returns the
+      existing fileAssetId. 11-File-Management-APIs.md Section 11.1.3.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [chunkChecksums]
+            properties:
+              chunkChecksums:
+                type: array
+                items: { type: string }
+    responses:
+      '202':
+        description: Upload finalized, entering the validation pipeline.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/FileUploadAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: UPLOAD_SESSION_EXPIRED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: CHUNK_INTEGRITY_MISMATCH.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/{fileId}/download:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileDownload
+    tags: [File]
+    summary: Download File
+    description: >-
+      Retrieve the original file content via a short-lived, signed,
+      authenticated URL - never a direct, guessable static path.
+      11-File-Management-APIs.md Section 11.2.1.
+    parameters:
+      - name: Accept
+        in: header
+        required: false
+        description: application/json for a JSON downloadUrl response instead of a redirect.
+        schema: { type: string }
+    responses:
+      '302':
+        description: Redirect to a time-boxed signed URL.
+      '200':
+        description: JSON signed-URL response (when Accept is application/json).
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        downloadUrl: { type: string }
+                        expiresAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: FILE_NOT_YET_SCANNED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '410':
+        description: FILE_QUARANTINED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/{fileId}/preview:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileGetPreview
+    tags: [File]
+    summary: Preview File
+    description: >-
+      Retrieve a lightweight preview/thumbnail rendering of a file
+      without pulling the full original. 11-File-Management-APIs.md
+      Section 11.3.1.
+    parameters:
+      - name: size
+        in: query
+        schema: { type: string, enum: [small, medium, large] }
+    responses:
+      '302':
+        description: Redirect to a signed preview-asset URL.
+      '200':
+        description: JSON signed-URL response.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        previewUrl: { type: string }
+                        expiresAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/metadata:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileGetMetadata
+    tags: [File]
+    summary: Get File Metadata
+    description: >-
+      Retrieve rich metadata for a file - tags, EXIF/GPS, OCR status,
+      AI-generated metadata, retention category.
+      11-File-Management-APIs.md Section 11.4.1.
+    responses:
+      '200':
+        description: File metadata.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/FileMetadata'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: fileUpdateMetadata
+    tags: [File]
+    summary: Update File Metadata
+    description: >-
+      Update the mutable metadata fields of a file - tags, and (where
+      applicable) assetCategory correction. Immutable fields (checksum,
+      EXIF/GPS, OCR result) are never accepted by this endpoint.
+      11-File-Management-APIs.md Section 11.4.2.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tags:
+                type: array
+                items: { type: string }
+              assetCategory: { type: string }
+    responses:
+      '200':
+        description: File metadata updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/FileMetadata'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/versions:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileListVersions
+    tags: [File]
+    summary: List File Versions
+    description: >-
+      Retrieve every prior version of a file, ordered by the
+      previousVersionFileAssetId chain, most recent first.
+      11-File-Management-APIs.md Section 11.5.1.
+    responses:
+      '200':
+        description: File version list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FileVersionListItem'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/versions/{versionFileAssetId}:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+    - name: versionFileAssetId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileGetVersion
+    tags: [File]
+    summary: Get File Version
+    description: >-
+      Retrieve a specific prior version's detail.
+      11-File-Management-APIs.md Section 11.5.2.
+    responses:
+      '200':
+        description: File version detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/FileVersionDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/versions/{versionFileAssetId}/restore:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+    - name: versionFileAssetId
+      in: path
+      required: true
+      schema: { type: string }
+  post:
+    operationId: fileRestoreVersion
+    tags: [File]
+    summary: Restore File Version
+    description: >-
+      Make a prior version the current one - appends a new "current"
+      marker rather than deleting intervening versions, so restoring is
+      itself always reversible. 11-File-Management-APIs.md Section
+      11.5.3.
+    responses:
+      '200':
+        description: File version restored.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        newCurrentVersionFileAssetId: { type: string }
+                        restoredAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: VERSION_ALREADY_CURRENT.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/{fileId}/share-links:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  post:
+    operationId: fileCreateShareLink
+    tags: [File]
+    summary: Create Shareable Link
+    description: >-
+      Generate a time-boxed, signed shareable link for a file, usable
+      by anyone holding the link within its expiry.
+      requiresAuthentication = false is permitted only for
+      assetCategory values the tenant has explicitly allow-listed for
+      anonymous sharing - never for complaint attachments or any
+      citizen-PII-bearing file. 11-File-Management-APIs.md Section
+      11.6.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [expiresAt]
+            properties:
+              expiresAt: { type: string, format: date-time }
+              requiresAuthentication: { type: boolean, default: true }
+    responses:
+      '201':
+        description: Shareable link created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ShareLink'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '422':
+        description: ANONYMOUS_SHARING_NOT_ALLOWED_FOR_CATEGORY.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  get:
+    operationId: fileListShareLinks
+    tags: [File]
+    summary: List Shareable Links
+    description: >-
+      Retrieve every active/expired shareable link for a file. The
+      shareUrl/token itself is never re-returned in this listing, only
+      metadata. 11-File-Management-APIs.md Section 11.6.2.
+    responses:
+      '200':
+        description: Shareable link list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ShareLinkListItem'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/share-links/{shareLinkId}:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+    - name: shareLinkId
+      in: path
+      required: true
+      schema: { type: string }
+  delete:
+    operationId: fileRevokeShareLink
+    tags: [File]
+    summary: Revoke Shareable Link
+    description: >-
+      Immediately invalidate a shareable link before its natural
+      expiry. Any in-flight request using the revoked token fails from
+      that point forward. 11-File-Management-APIs.md Section 11.6.3.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/access:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileGetAccessList
+    tags: [File]
+    summary: Get File Access List
+    description: >-
+      Retrieve the resolved set of users who currently can access a
+      file - owner, scope-based role access, and explicit named grants,
+      in one view. accessBasis = "scope" entries are computed, not
+      stored. 11-File-Management-APIs.md Section 11.7.1.
+    responses:
+      '200':
+        description: File access list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FileAccessListItem'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  post:
+    operationId: fileGrantAccess
+    tags: [File]
+    summary: Grant File Access
+    description: >-
+      Grant a specific named user direct access to a file, without a
+      shareable link. Never grants cross-tenant access, even for Super
+      Admin. 11-File-Management-APIs.md Section 11.7.2.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [grantedToUserId]
+            properties:
+              grantedToUserId: { type: string }
+              expiresAt: { type: string, format: date-time }
+    responses:
+      '201':
+        description: File access granted.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/AccessGrant'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/access/{accessGrantId}:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+    - name: accessGrantId
+      in: path
+      required: true
+      schema: { type: string }
+  delete:
+    operationId: fileRevokeAccess
+    tags: [File]
+    summary: Revoke File Access
+    description: >-
+      Remove a previously granted named-user access grant. Revocation
+      is immediate. 11-File-Management-APIs.md Section 11.7.3.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/virus-scan:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileGetVirusScanStatus
+    tags: [File]
+    summary: Get Virus Scan Status
+    description: >-
+      Poll the antivirus scan outcome for a recently uploaded file. An
+      infected result moves lifecycleState to a permanently quarantined
+      state - the file is never made downloadable or previewable
+      regardless of any later rescan. 11-File-Management-APIs.md
+      Section 11.8.1.
+    responses:
+      '200':
+        description: Virus scan status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        virusScanStatus:
+                          type: string
+                          enum: [pending, clean, infected, scan_failed]
+                        scannedAt: { type: [string, "null"], format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/virus-scan/rescan:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  post:
+    operationId: fileTriggerRescan
+    tags: [File]
+    summary: Trigger Rescan
+    description: >-
+      Re-run the antivirus scan against a file. A rescan never changes
+      a file from infected back to clean - that would defeat the
+      terminal-quarantine guarantee; rescan only applies to
+      clean/scan_failed files. 11-File-Management-APIs.md Section
+      11.8.2.
+    responses:
+      '202':
+        description: Rescan queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        virusScanStatus: { type: string, enum: [pending] }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: FILE_PERMANENTLY_QUARANTINED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/{fileId}/thumbnail:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileGetThumbnail
+    tags: [File]
+    summary: Get Thumbnail
+    description: >-
+      Retrieve the generated thumbnail asset for an image file. A thin,
+      semantically named alias over Preview File (?size=small), kept as
+      its own endpoint for client discoverability.
+      11-File-Management-APIs.md Section 11.9.1.
+    responses:
+      '302':
+        description: Redirect to the thumbnail's signed URL.
+      '200':
+        description: JSON signed-URL response (same posture as Preview File).
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        previewUrl: { type: string }
+                        expiresAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/files/{fileId}/reprocess:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  post:
+    operationId: fileRequestReprocess
+    tags: [File]
+    summary: Request Image Re-Processing
+    description: >-
+      Request regeneration of an image's thumbnail/preview. Generates a
+      new version (Section 11.5); never mutates the original uploaded
+      bytes in place - preserving the original as evidence.
+      11-File-Management-APIs.md Section 11.9.2.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [operation]
+            properties:
+              operation:
+                type: string
+                enum: [rotate, compress, regenerate_thumbnail]
+              rotationDegrees:
+                type: integer
+                enum: [90, 180, 270]
+    responses:
+      '202':
+        description: Re-processing queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        reprocessingStatus: { type: string, enum: [queued] }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '415':
+        description: UNSUPPORTED_FOR_FILE_TYPE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/{fileId}/ocr:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileGetOcrResult
+    tags: [File]
+    summary: Get OCR Result
+    description: >-
+      Retrieve the extracted text from a scanned document/image.
+      extractedText present only when ocrStatus = completed.
+      11-File-Management-APIs.md Section 11.10.1.
+    responses:
+      '200':
+        description: OCR result.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        ocrStatus:
+                          type: string
+                          enum: [pending, completed, failed, not_applicable]
+                        extractedText: { type: string }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  post:
+    operationId: fileTriggerOcr
+    tags: [File]
+    summary: Trigger OCR
+    description: >-
+      Request text extraction for a document/image that has not yet
+      been OCR-processed. Re-triggering OCR on an already-completed
+      file overwrites the prior extraction result; the file's own
+      version chain is unaffected. 11-File-Management-APIs.md Section
+      11.10.2.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              languageHint: { type: string, enum: [ta, en] }
+    responses:
+      '202':
+        description: OCR queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        ocrStatus: { type: string, enum: [pending] }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '415':
+        description: UNSUPPORTED_FOR_FILE_TYPE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: FILE_NOT_YET_SCANNED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/search:
+  get:
+    operationId: fileSearch
+    tags: [File]
+    summary: Search Files
+    description: >-
+      Free-text/filtered search across the caller's accessible files,
+      by tag, filename, category, or linked entity. Results never
+      include files outside the caller's own access rights.
+      11-File-Management-APIs.md Section 11.11.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/search'
+      - name: assetCategory
+        in: query
+        schema: { type: string }
+      - name: linkedEntityType
+        in: query
+        schema: { type: string }
+      - name: linkedEntityId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    responses:
+      '200':
+        description: File search results.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: './components/schemas.yaml#/Attachment'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+
+/api/v1/files/{fileId}/archive:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  post:
+    operationId: fileArchive
+    tags: [File]
+    summary: Archive File
+    description: >-
+      Move a file from the hot operational tier to the archive tier
+      ahead of its normal scheduled archival. Archived files remain
+      fully queryable/downloadable - archival affects storage tier and
+      retrieval latency only, never accessibility.
+      11-File-Management-APIs.md Section 11.12.1.
+    responses:
+      '200':
+        description: File archived.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        lifecycleState: { type: string, enum: [archived] }
+                        archivedAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: FILE_NOT_HOT.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/archived:
+  get:
+    operationId: fileListArchived
+    tags: [File]
+    summary: List Archived Files
+    description: >-
+      Retrieve files currently in the archive tier.
+      11-File-Management-APIs.md Section 11.12.2.
+    parameters:
+      - name: assetCategory
+        in: query
+        schema: { type: string }
+      - name: filter[archivedAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[archivedAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Archived file list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ArchivedFileListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/files/{fileId}/restore:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  post:
+    operationId: fileRestoreFromArchive
+    tags: [File]
+    summary: Restore Archived File
+    description: >-
+      Move a file back from the archive tier to the hot operational
+      tier. Restoring to hot never resets the retentionExpiresAt clock -
+      retention is anchored to the original finalization event, not to
+      storage-tier transitions. 11-File-Management-APIs.md Section
+      11.12.3.
+    responses:
+      '200':
+        description: File restored to hot tier.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        lifecycleState: { type: string, enum: [hot] }
+                        restoredAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: FILE_NOT_ARCHIVED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/{fileId}:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  delete:
+    operationId: fileDelete
+    tags: [File]
+    summary: Delete File
+    description: >-
+      Soft-delete a file - never a physical storage delete via API;
+      physical removal is exclusively the retention-expiry Cleanup
+      Job's responsibility. A file that is the sole evidence attached
+      to an unresolved/unclosed complaint may be protected from
+      deletion. 11-File-Management-APIs.md Section 11.13.1.
+    responses:
+      '200':
+        description: File soft-deleted.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        fileAssetId: { type: string }
+                        deletedAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: FILE_PROTECTED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/files/storage-usage:
+  get:
+    operationId: fileGetStorageUsage
+    tags: [File]
+    summary: Get Storage Usage Summary
+    description: >-
+      Retrieve the tenant's total storage consumption against its
+      configured quota. quotaBytes present only if the tenant has a
+      configured storage ceiling. 11-File-Management-APIs.md Section
+      11.14.1.
+    responses:
+      '200':
+        description: Storage usage summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/StorageUsageSummary'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/files/storage-usage/by-category:
+  get:
+    operationId: fileGetStorageUsageByCategory
+    tags: [File]
+    summary: Get Storage Usage by Category
+    description: >-
+      Break down storage consumption by asset category (images, voice,
+      documents, AI-generated files). 11-File-Management-APIs.md
+      Section 11.14.2.
+    responses:
+      '200':
+        description: Storage usage by category.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/StorageUsageByCategoryRow'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/files/{fileId}/audit-trail:
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: fileGetAuditTrail
+    tags: [File]
+    summary: Get File Audit Trail
+    description: >-
+      Retrieve the complete access/action history for one specific
+      file - upload, downloads, previews, shares, metadata changes,
+      archival, deletion. Aggregates every audit_log row where
+      entityType = 'file_asset' and entityId = fileId into one
+      chronological view. 11-File-Management-APIs.md Section 11.15.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: File audit trail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FileAuditTrailItem'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+components:
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: >-
+        Recommended on file-creating/consequential operations to
+        prevent duplicate submission on client retry
+        (11-File-Management-APIs.md Section 11.1.1).
+      schema:
+        type: string
+    CorrelationIdHeader:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: >-
+        Optional client-supplied correlation identifier
+        (API_SPECIFICATION.md Section 1.14); generated at the Gateway
+        if absent.
+      schema:
+        type: string
+  schemas:
+    FileUploadAck:
+      type: object
+      properties:
+        fileAssetId: { type: string }
+        assetCategory: { type: string }
+        mimeType: { type: string }
+        sizeBytes: { type: integer }
+        virusScanStatus: { type: string, enum: [pending] }
+        lifecycleState: { type: string, enum: [quarantine] }
+        createdAt: { type: string, format: date-time }
+    MultipartUploadSession:
+      type: object
+      properties:
+        multipartUploadId: { type: string }
+        chunkSizeBytes: { type: integer }
+        expiresAt: { type: string, format: date-time }
+    FileMetadata:
+      type: object
+      properties:
+        fileAssetId: { type: string }
+        assetCategory: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        gpsLatitude: { type: [number, "null"] }
+        gpsLongitude: { type: [number, "null"] }
+        ocrStatus: { type: string, enum: [pending, completed, failed, not_applicable] }
+        isAiGenerated: { type: boolean }
+        retentionCategory: { type: string }
+        checksum: { type: string }
+        virusScanStatus: { type: string, enum: [pending, clean, infected, scan_failed] }
+    FileVersionListItem:
+      type: object
+      properties:
+        fileAssetId: { type: string }
+        versionNumber: { type: integer }
+        uploadedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        isCurrent: { type: boolean }
+    FileVersionDetail:
+      type: object
+      properties:
+        fileAssetId: { type: string }
+        versionNumber: { type: integer }
+        mimeType: { type: string }
+        sizeBytes: { type: integer }
+        checksum: { type: string }
+        uploadedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+    ShareLink:
+      type: object
+      properties:
+        shareLinkId: { type: string }
+        shareUrl: { type: string }
+        expiresAt: { type: string, format: date-time }
+        requiresAuthentication: { type: boolean }
+    ShareLinkListItem:
+      type: object
+      properties:
+        shareLinkId: { type: string }
+        expiresAt: { type: string, format: date-time }
+        requiresAuthentication: { type: boolean }
+        accessCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+    FileAccessListItem:
+      type: object
+      properties:
+        userId: { type: string }
+        userName: { type: string }
+        accessBasis: { type: string, enum: [owner, scope, explicit_grant] }
+        grantedAt: { type: [string, "null"], format: date-time }
+    AccessGrant:
+      type: object
+      properties:
+        accessGrantId: { type: string }
+        grantedToUserId: { type: string }
+        expiresAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+    ArchivedFileListItem:
+      type: object
+      properties:
+        fileAssetId: { type: string }
+        assetCategory: { type: string }
+        archivedAt: { type: string, format: date-time }
+        retentionExpiresAt: { type: string, format: date-time }
+    StorageUsageSummary:
+      type: object
+      properties:
+        totalBytesUsed: { type: integer }
+        quotaBytes: { type: [integer, "null"] }
+        quotaUtilizationPercent: { type: [number, "null"] }
+        hotTierBytes: { type: integer }
+        archiveTierBytes: { type: integer }
+    StorageUsageByCategoryRow:
+      type: object
+      properties:
+        assetCategory: { type: string }
+        bytesUsed: { type: integer }
+        fileCount: { type: integer }
+    FileAuditTrailItem:
+      type: object
+      properties:
+        action: { type: string }
+        actorUserId: { type: string }
+        actorName: { type: string }
+        ipAddress: { type: string }
+        createdAt: { type: string, format: date-time }

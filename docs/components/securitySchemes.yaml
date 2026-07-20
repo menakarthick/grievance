@@ -1,0 +1,15 @@
+bearerAuth:
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  description: >-
+    RS256-signed JWT bearer token issued by the Authentication APIs
+    (API_SPECIFICATION.md Section 2; ARCHITECTURE.md Section 7 Authentication
+    Flow). Verified once at the API Gateway before any request reaches a
+    downstream service (ARCHITECTURE.md Section 4.1). Claims carry userId,
+    userType, tenantId, roles, scope, matching the RBAC model in
+    ARCHITECTURE.md Section 11.2 (API_SPECIFICATION.md Section 14.3).
+    Default expiry 15 minutes (SRS Section 8.1). Public/pre-authentication
+    endpoints (OTP request/verify, login, refresh, forgot/reset password)
+    override this requirement with an empty security array at the operation
+    level (API_SPECIFICATION.md Section 1.1).

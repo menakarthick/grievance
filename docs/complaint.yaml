@@ -1,0 +1,903 @@
+/api/v1/complaints:
+  post:
+    operationId: complaintRegister
+    tags:
+      - Complaint
+    summary: Register Complaint (Text)
+    description: >-
+      File a new text-based grievance; triggers the Complaint Agent
+      classification pipeline and Assignment Engine asynchronously.
+      API_SPECIFICATION.md Section 4.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - description
+              - location
+              - languageCode
+            properties:
+              description:
+                type: string
+                minLength: 10
+                maxLength: 5000
+              categoryId:
+                type: string
+                description: Optional — AI-assisted classification if omitted.
+              location:
+                type: object
+                properties:
+                  latitude:
+                    type: number
+                  longitude:
+                    type: number
+                  wardId:
+                    type: string
+                  addressText:
+                    type: string
+                description: At least one of wardId or addressText required.
+              languageCode:
+                type: string
+                enum:
+                  - ta
+                  - en
+    responses:
+      '202':
+        description: >-
+          Accepted — classification/assignment happen asynchronously; the
+          tracking ID is returned immediately per SRS §3.8.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        trackingId:
+                          type: string
+                          example: TMBM-ENG-202607-000123
+                        statusLabel:
+                          type: string
+                          example: Registered
+                        createdAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '422':
+        description: CATEGORY_NOT_FOUND.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+  get:
+    operationId: complaintList
+    tags:
+      - Complaint
+    summary: Complaint List — Search & Filter
+    description: >-
+      Officer/Admin queue view — list complaints with full search, filter,
+      and sort. Satisfies both Complaint Search and Complaint Filter as
+      query-parameter facets of one collection endpoint.
+      API_SPECIFICATION.md Section 4.8.
+    parameters:
+      - $ref: './components/parameters.yaml#/search'
+      - name: statusId
+        in: query
+        schema:
+          type: string
+      - name: departmentId
+        in: query
+        schema:
+          type: string
+      - name: categoryId
+        in: query
+        schema:
+          type: string
+      - name: priority
+        in: query
+        schema:
+          type: string
+          enum: [low, medium, high, critical]
+      - name: filter[createdAt][gte]
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - name: filter[createdAt][lte]
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - name: filter[slaDueAt][lte]
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - $ref: './components/parameters.yaml#/sort'
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          maximum: 100
+          default: 20
+      - $ref: './components/parameters.yaml#/include'
+    responses:
+      '200':
+        description: Paginated, filtered complaint list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ComplaintListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/complaints/voice:
+  post:
+    operationId: complaintRegisterVoice
+    tags:
+      - Complaint
+    summary: Register Voice Complaint
+    description: >-
+      File a grievance via a recorded voice note (Tamil or English), per
+      the Voice Complaint Flow (SRS §3.6). API_SPECIFICATION.md Section
+      4.2.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      $ref: './components/requestBodies.yaml#/VoiceComplaintMultipart'
+    responses:
+      '202':
+        description: >-
+          Accepted — transcription/classification are asynchronous.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        trackingId:
+                          type: string
+                        statusLabel:
+                          type: string
+                          example: Registered
+                        voiceProcessingStatus:
+                          type: string
+                          example: queued
+                        createdAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '413':
+        description: FILE_TOO_LARGE.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '415':
+        description: UNSUPPORTED_MEDIA_TYPE.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '422':
+        description: MALWARE_DETECTED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/complaints/{complaintId}/attachments:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema:
+        type: string
+  post:
+    operationId: complaintUploadAttachment
+    tags:
+      - Complaint
+    summary: Upload Complaint Attachment (Image)
+    description: >-
+      Attach an image (or officer evidence document) to an existing
+      complaint. API_SPECIFICATION.md Section 4.3.
+    requestBody:
+      $ref: './components/requestBodies.yaml#/FileUploadMultipart'
+    responses:
+      '202':
+        description: Attachment accepted; virus scan pending.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      allOf:
+                        - $ref: './components/schemas.yaml#/FileReference'
+                        - type: object
+                          properties:
+                            uploadedAt:
+                              type: string
+                              format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '413':
+        description: FILE_TOO_LARGE.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '415':
+        description: UNSUPPORTED_MEDIA_TYPE.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '422':
+        description: MAX_ATTACHMENTS_EXCEEDED or MALWARE_DETECTED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+/api/v1/complaints/{complaintId}:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema:
+        type: string
+  patch:
+    operationId: complaintUpdate
+    tags:
+      - Complaint
+    summary: Update Complaint
+    description: >-
+      Officer/Admin correction of AI-assigned or citizen-entered fields.
+      Never used for status transitions. API_SPECIFICATION.md Section
+      4.4.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              categoryId:
+                type: string
+              priority:
+                type: string
+                enum: [low, medium, high, critical]
+              severity:
+                type: string
+    responses:
+      '200':
+        description: Updated complaint summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ComplaintDetail'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: COMPLAINT_ALREADY_CLOSED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+  get:
+    operationId: complaintGetDetails
+    tags:
+      - Complaint
+    summary: Complaint Details
+    description: >-
+      Retrieve the full detail of a single complaint.
+      API_SPECIFICATION.md Section 4.5.
+    parameters:
+      - $ref: './components/parameters.yaml#/include'
+    responses:
+      '200':
+        description: Complaint detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ComplaintDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/complaints/{complaintId}/timeline:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema:
+        type: string
+  get:
+    operationId: complaintGetTimeline
+    tags:
+      - Complaint
+    summary: Complaint Timeline
+    description: >-
+      Retrieve the full append-only status/action history of a
+      complaint. API_SPECIFICATION.md Section 4.6.
+    parameters:
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          maximum: 100
+          default: 20
+    responses:
+      '200':
+        description: Paginated timeline.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          fromStatusLabel:
+                            type: string
+                          toStatusLabel:
+                            type: string
+                          changedBy:
+                            $ref: './components/schemas.yaml#/UserReference'
+                          note:
+                            type: string
+                          createdAt:
+                            type: string
+                            format: date-time
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/complaints/track/{trackingId}:
+  get:
+    operationId: complaintTrack
+    tags:
+      - Complaint
+    summary: Complaint Tracking (Public Lookup)
+    description: >-
+      Look up a complaint's current status by its human-readable Tracking
+      ID. Requires the authenticated citizen to be the complaint's filer.
+      API_SPECIFICATION.md Section 4.7.
+    parameters:
+      - name: trackingId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[A-Z]{2,10}-[A-Z]{2,10}-\d{6}-\d{6}$'
+    responses:
+      '200':
+        description: Tracking summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        trackingId:
+                          type: string
+                        statusLabel:
+                          type: string
+                        categoryName:
+                          type: string
+                        currentOfficerName:
+                          type: string
+                        lastUpdatedAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TRACKING_ID_NOT_FOUND.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+/api/v1/complaints/{complaintId}/assignments:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema:
+        type: string
+  post:
+    operationId: complaintCreateAssignment
+    tags:
+      - Complaint
+    summary: Complaint Assignment
+    description: >-
+      Assign or reassign an officer to a complaint; appends to the
+      assignment history rather than overwriting it.
+      API_SPECIFICATION.md Section 4.9.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - officerId
+            properties:
+              officerId:
+                type: string
+              reason:
+                type: string
+    responses:
+      '201':
+        description: Assignment created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        complaintId:
+                          type: string
+                        officerId:
+                          type: string
+                        assignedBy:
+                          type: string
+                        assignedAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: COMPLAINT_ALREADY_CLOSED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '422':
+        description: OFFICER_OUT_OF_SCOPE.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+/api/v1/complaints/{complaintId}/resolution:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema:
+        type: string
+  post:
+    operationId: complaintCreateResolution
+    tags:
+      - Complaint
+    summary: Complaint Resolution
+    description: >-
+      Officer marks a complaint resolved, attaching completion evidence.
+      API_SPECIFICATION.md Section 4.10.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - resolutionNote
+            properties:
+              resolutionNote:
+                type: string
+                minLength: 10
+                maxLength: 2000
+              resolutionFileAssetIds:
+                type: array
+                items:
+                  type: string
+    responses:
+      '201':
+        description: Complaint resolved.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        complaintId:
+                          type: string
+                        statusLabel:
+                          type: string
+                          example: Resolved
+                        resolvedAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: INVALID_STATUS_TRANSITION.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+/api/v1/complaints/{complaintId}/closure:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema:
+        type: string
+  post:
+    operationId: complaintCreateClosure
+    tags:
+      - Complaint
+    summary: Complaint Closure
+    description: >-
+      Formally close a resolved complaint. API_SPECIFICATION.md Section
+      4.11.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - closureReasonId
+            properties:
+              closureReasonId:
+                type: string
+                description: reference_value, CLOSURE_REASON domain.
+              remarks:
+                type: string
+    responses:
+      '201':
+        description: Complaint closed.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        complaintId:
+                          type: string
+                        statusLabel:
+                          type: string
+                          example: Closed
+                        closedAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: INVALID_STATUS_TRANSITION.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+/api/v1/complaints/{complaintId}/feedback:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema:
+        type: string
+  post:
+    operationId: complaintSubmitFeedback
+    tags:
+      - Complaint
+    summary: Citizen Feedback
+    description: >-
+      Citizen submits a post-resolution rating/comment.
+      API_SPECIFICATION.md Section 4.12.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - rating
+            properties:
+              rating:
+                type: integer
+                minimum: 1
+                maximum: 5
+              comment:
+                type: string
+    responses:
+      '201':
+        description: Feedback recorded.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        complaintId:
+                          type: string
+                        rating:
+                          type: integer
+                        comment:
+                          type: string
+                        submittedAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: FEEDBACK_ALREADY_SUBMITTED or COMPLAINT_NOT_YET_RESOLVED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+/api/v1/complaints/{complaintId}/reopen:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema:
+        type: string
+  post:
+    operationId: complaintReopen
+    tags:
+      - Complaint
+    summary: Complaint Reopen
+    description: >-
+      Citizen reopens a closed complaint they consider unresolved, within
+      the tenant-configured reopen window. API_SPECIFICATION.md Section
+      4.13.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - reason
+            properties:
+              reason:
+                type: string
+                minLength: 10
+                maxLength: 1000
+    responses:
+      '201':
+        description: Complaint reopened.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        complaintId:
+                          type: string
+                        statusLabel:
+                          type: string
+                          example: Reopened
+                        reopenedAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: COMPLAINT_NOT_CLOSED or REOPEN_WINDOW_EXPIRED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+components:
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: >-
+        Client-generated UUID protecting this create operation from
+        duplicate submission on retry (API_SPECIFICATION.md Section 1.5;
+        components/headers.yaml#/Idempotency-Key).
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    ComplaintListItem:
+      type: object
+      description: List/queue-view shape (API_SPECIFICATION.md Section 4.8).
+      properties:
+        id:
+          type: string
+        trackingId:
+          type: string
+        statusLabel:
+          type: string
+        priority:
+          type: string
+        departmentName:
+          type: string
+        slaDueAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    ComplaintDetail:
+      type: object
+      description: >-
+        Full detail-view shape shared by Get Complaint Details and Update
+        Complaint (API_SPECIFICATION.md Sections 4.4-4.5).
+      properties:
+        id:
+          type: string
+        trackingId:
+          type: string
+        description:
+          type: string
+        categoryName:
+          type: string
+        statusLabel:
+          type: string
+        priority:
+          type: string
+        severity:
+          type: string
+        location:
+          type: object
+        currentOfficer:
+          $ref: './components/schemas.yaml#/UserReference'
+        slaDueAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        closedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        attachments:
+          type: array
+          items:
+            $ref: './components/schemas.yaml#/FileReference'

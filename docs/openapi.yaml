@@ -1,0 +1,640 @@
+openapi: 3.1.0
+info:
+  title: AI Powered Enterprise Citizen Service & Grievance Management Platform API
+  version: 1.0.0
+  summary: Master OpenAPI 3.1 document assembling the ten module path files and shared components by reference.
+  description: >-
+    Master, non-inlining OpenAPI 3.1 document for the platform described in
+    docs/API_SPECIFICATION.md (Sections 1-16) and docs/Enterprise-API-Endpoint-Catalog.md.
+    Every path and every reusable component below is a $ref into an external file;
+    this document contains no inline endpoint definitions.
+  contact:
+    name: Tambaram City Municipal Corporation - Pilot Deployment
+  license:
+    name: Proprietary - Government of Tamil Nadu Pilot Engagement
+externalDocs:
+  description: Enterprise API Specification and Endpoint Catalog (design source of truth)
+  url: ./API_SPECIFICATION.md
+servers:
+  - url: https://{tenantHost}/api/v1
+    description: Production (per-tenant subdomain, TLS 1.2+/HSTS)
+    variables:
+      tenantHost:
+        default: tambaram.grievance.tn.gov.in
+  - url: https://staging.grievance.tn.gov.in/api/v1
+    description: Staging / UAT
+tags:
+  - name: Authentication
+    description: Citizen/Officer/Admin login, OTP, MFA, refresh, logout, password reset, token validation.
+  - name: Citizen
+    description: Citizen self-service profile, preferences, history, dashboard.
+  - name: Complaint
+    description: Complaint lifecycle from registration through closure/reopen.
+  - name: AI
+    description: AI Orchestration / Voice Processing Service capabilities.
+  - name: Administration
+    description: Departments, Categories, Users, Roles, Permissions, Workflow, SLA, Escalation, Configuration, Feature Flags, Providers.
+  - name: Geographic
+    description: Zones, Wards, GIS boundaries, reverse geocoding, nearby complaints.
+  - name: Notification
+    description: Channel-agnostic dispatch, templates, delivery history.
+  - name: Reports
+    description: Dashboards, analytics, daily/monthly/officer/department/SLA reports, export.
+  - name: Audit
+    description: Audit log, activity log, login history, configuration history.
+  - name: File
+    description: Upload, download, preview, delete, metadata.
+security:
+  - bearerAuth: []
+paths:
+  # ============================================================
+  # Module 1 - Authentication (authentication.yaml)
+  # ============================================================
+  /api/v1/auth/citizen/otp/request:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1citizen~1otp~1request'
+  /api/v1/auth/citizen/otp/verify:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1citizen~1otp~1verify'
+  /api/v1/auth/officer/login:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1officer~1login'
+  /api/v1/auth/officer/otp/verify:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1officer~1otp~1verify'
+  /api/v1/auth/admin/login:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1admin~1login'
+  /api/v1/auth/mfa/verify:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1mfa~1verify'
+  /api/v1/auth/token/refresh:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1token~1refresh'
+  /api/v1/auth/logout:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1logout'
+  /api/v1/auth/password/forgot:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1password~1forgot'
+  /api/v1/auth/password/reset:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1password~1reset'
+  /api/v1/auth/token/validate:
+    $ref: './authentication.yaml#/~1api~1v1~1auth~1token~1validate'
+
+  # ============================================================
+  # Module 2 - Citizen (citizen.yaml)
+  # ============================================================
+  /api/v1/citizens/me:
+    $ref: './citizen.yaml#/~1api~1v1~1citizens~1me'
+  /api/v1/citizens/me/address:
+    $ref: './citizen.yaml#/~1api~1v1~1citizens~1me~1address'
+  /api/v1/citizens/me/language-preference:
+    $ref: './citizen.yaml#/~1api~1v1~1citizens~1me~1language-preference'
+  /api/v1/citizens/me/notification-preference:
+    $ref: './citizen.yaml#/~1api~1v1~1citizens~1me~1notification-preference'
+  /api/v1/citizens/me/complaints:
+    $ref: './citizen.yaml#/~1api~1v1~1citizens~1me~1complaints'
+  /api/v1/citizens/me/dashboard:
+    $ref: './citizen.yaml#/~1api~1v1~1citizens~1me~1dashboard'
+
+  # ============================================================
+  # Module 3 - Complaint (complaint.yaml)
+  # ============================================================
+  /api/v1/complaints:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints'
+  /api/v1/complaints/voice:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1voice'
+  /api/v1/complaints/{complaintId}/attachments:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1{complaintId}~1attachments'
+  /api/v1/complaints/{complaintId}:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1{complaintId}'
+  /api/v1/complaints/{complaintId}/timeline:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1{complaintId}~1timeline'
+  /api/v1/complaints/track/{trackingId}:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1track~1{trackingId}'
+  /api/v1/complaints/{complaintId}/assignments:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1{complaintId}~1assignments'
+  /api/v1/complaints/{complaintId}/resolution:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1{complaintId}~1resolution'
+  /api/v1/complaints/{complaintId}/closure:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1{complaintId}~1closure'
+  /api/v1/complaints/{complaintId}/feedback:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1{complaintId}~1feedback'
+  /api/v1/complaints/{complaintId}/reopen:
+    $ref: './complaint.yaml#/~1api~1v1~1complaints~1{complaintId}~1reopen'
+
+  # ============================================================
+  # Module 4 - AI (ai.yaml)
+  # ============================================================
+  /api/v1/ai/speech-to-text:
+    $ref: './ai.yaml#/~1api~1v1~1ai~1speech-to-text'
+  /api/v1/ai/complaint-classification:
+    $ref: './ai.yaml#/~1api~1v1~1ai~1complaint-classification'
+  /api/v1/ai/priority-prediction:
+    $ref: './ai.yaml#/~1api~1v1~1ai~1priority-prediction'
+  /api/v1/ai/department-recommendation:
+    $ref: './ai.yaml#/~1api~1v1~1ai~1department-recommendation'
+  /api/v1/ai/officer-assistant/query:
+    $ref: './ai.yaml#/~1api~1v1~1ai~1officer-assistant~1query'
+  /api/v1/ai/analytics/insights:
+    $ref: './ai.yaml#/~1api~1v1~1ai~1analytics~1insights'
+  /api/v1/ai/summarization:
+    $ref: './ai.yaml#/~1api~1v1~1ai~1summarization'
+  /api/v1/ai/translation:
+    $ref: './ai.yaml#/~1api~1v1~1ai~1translation'
+  # ============================================================
+  # Module 5 - Administration (administration.yaml)
+  # ============================================================
+  /api/v1/departments:
+    $ref: './administration.yaml#/~1api~1v1~1departments'
+  /api/v1/departments/{departmentId}:
+    $ref: './administration.yaml#/~1api~1v1~1departments~1{departmentId}'
+  /api/v1/complaint-categories:
+    $ref: './administration.yaml#/~1api~1v1~1complaint-categories'
+  /api/v1/complaint-categories/{categoryId}:
+    $ref: './administration.yaml#/~1api~1v1~1complaint-categories~1{categoryId}'
+  /api/v1/users:
+    $ref: './administration.yaml#/~1api~1v1~1users'
+  /api/v1/users/{userId}:
+    $ref: './administration.yaml#/~1api~1v1~1users~1{userId}'
+  /api/v1/roles:
+    $ref: './administration.yaml#/~1api~1v1~1roles'
+  /api/v1/roles/{roleId}:
+    $ref: './administration.yaml#/~1api~1v1~1roles~1{roleId}'
+  /api/v1/permissions:
+    $ref: './administration.yaml#/~1api~1v1~1permissions'
+  /api/v1/permissions/{permissionId}:
+    $ref: './administration.yaml#/~1api~1v1~1permissions~1{permissionId}'
+  /api/v1/approval-workflows:
+    $ref: './administration.yaml#/~1api~1v1~1approval-workflows'
+  /api/v1/approval-workflows/{workflowConfigId}:
+    $ref: './administration.yaml#/~1api~1v1~1approval-workflows~1{workflowConfigId}'
+  /api/v1/sla-rules:
+    $ref: './administration.yaml#/~1api~1v1~1sla-rules'
+  /api/v1/sla-rules/{slaRuleId}:
+    $ref: './administration.yaml#/~1api~1v1~1sla-rules~1{slaRuleId}'
+  /api/v1/escalation-rules:
+    $ref: './administration.yaml#/~1api~1v1~1escalation-rules'
+  /api/v1/escalation-rules/{escalationRuleId}:
+    $ref: './administration.yaml#/~1api~1v1~1escalation-rules~1{escalationRuleId}'
+  /api/v1/tenant-config:
+    $ref: './administration.yaml#/~1api~1v1~1tenant-config'
+  /api/v1/feature-flags:
+    $ref: './administration.yaml#/~1api~1v1~1feature-flags'
+  /api/v1/feature-flags/{flagKey}:
+    $ref: './administration.yaml#/~1api~1v1~1feature-flags~1{flagKey}'
+  /api/v1/providers:
+    $ref: './administration.yaml#/~1api~1v1~1providers'
+  /api/v1/providers/{providerType}:
+    $ref: './administration.yaml#/~1api~1v1~1providers~1{providerType}'
+
+  # ============================================================
+  # Module 6 - Geographic (geographic.yaml)
+  # ============================================================
+  /api/v1/geo/states:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1states'
+  /api/v1/geo/states/{stateId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1states~1{stateId}'
+  /api/v1/geo/districts:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1districts'
+  /api/v1/geo/districts/{districtId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1districts~1{districtId}'
+  /api/v1/geo/corporations:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1corporations'
+  /api/v1/geo/corporations/{corporationId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1corporations~1{corporationId}'
+  /api/v1/geo/regions:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1regions'
+  /api/v1/geo/regions/{regionId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1regions~1{regionId}'
+  /api/v1/geo/zones:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1zones'
+  /api/v1/geo/zones/{zoneId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1zones~1{zoneId}'
+  /api/v1/geo/divisions:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1divisions'
+  /api/v1/geo/divisions/{divisionId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1divisions~1{divisionId}'
+  /api/v1/geo/wards:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1wards'
+  /api/v1/geo/wards/{wardId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1wards~1{wardId}'
+  /api/v1/geo/streets:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1streets'
+  /api/v1/geo/streets/{streetId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1streets~1{streetId}'
+  /api/v1/geo/localities:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1localities'
+  /api/v1/geo/localities/{localityId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1localities~1{localityId}'
+  /api/v1/geo/gis/status:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1gis~1status'
+  /api/v1/geo/gis/hierarchy:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1gis~1hierarchy'
+  /api/v1/geo/map/config:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1map~1config'
+  /api/v1/geo/map/markers:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1map~1markers'
+  /api/v1/geo/reverse-geocode:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1reverse-geocode'
+  /api/v1/geo/reverse-geocode/batch:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1reverse-geocode~1batch'
+  /api/v1/complaints/nearby:
+    $ref: './geographic.yaml#/~1api~1v1~1complaints~1nearby'
+  /api/v1/geo/heatmap:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1heatmap'
+  /api/v1/geo/analytics:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1analytics'
+  /api/v1/geo/boundaries:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1boundaries'
+  /api/v1/geo/boundaries/{orgUnitId}:
+    $ref: './geographic.yaml#/~1api~1v1~1geo~1boundaries~1{orgUnitId}'
+  # ============================================================
+  # Module 7 - Notification (notification.yaml)
+  # ============================================================
+  /api/v1/notifications/sms:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1sms'
+  /api/v1/notifications/sms/{notificationDispatchId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1sms~1{notificationDispatchId}'
+  /api/v1/notifications/sms/test:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1sms~1test'
+  /api/v1/notifications/email:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1email'
+  /api/v1/notifications/email/{notificationDispatchId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1email~1{notificationDispatchId}'
+  /api/v1/notifications/email/test:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1email~1test'
+  /api/v1/notifications/whatsapp:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1whatsapp'
+  /api/v1/notifications/whatsapp/{notificationDispatchId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1whatsapp~1{notificationDispatchId}'
+  /api/v1/notifications/whatsapp/test:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1whatsapp~1test'
+  /api/v1/notifications/push:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1push'
+  /api/v1/notifications/push/{notificationDispatchId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1push~1{notificationDispatchId}'
+  /api/v1/notifications/push/test:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1push~1test'
+  /api/v1/notifications/in-app:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1in-app'
+  /api/v1/notifications/in-app/{notificationDispatchId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1in-app~1{notificationDispatchId}'
+  /api/v1/notifications/in-app/{notificationDispatchId}/read:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1in-app~1{notificationDispatchId}~1read'
+  /api/v1/notifications/in-app/read-all:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1in-app~1read-all'
+  /api/v1/notifications/in-app/unread-count:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1in-app~1unread-count'
+  /api/v1/notification-templates:
+    $ref: './notification.yaml#/~1api~1v1~1notification-templates'
+  /api/v1/notification-templates/{templateId}:
+    $ref: './notification.yaml#/~1api~1v1~1notification-templates~1{templateId}'
+  /api/v1/notification-templates/{templateId}/versions:
+    $ref: './notification.yaml#/~1api~1v1~1notification-templates~1{templateId}~1versions'
+  /api/v1/notification-templates/{templateId}/preview:
+    $ref: './notification.yaml#/~1api~1v1~1notification-templates~1{templateId}~1preview'
+  /api/v1/notification-templates/{templateId}/test-send:
+    $ref: './notification.yaml#/~1api~1v1~1notification-templates~1{templateId}~1test-send'
+  /api/v1/notification-templates/{templateId}/submit-for-approval:
+    $ref: './notification.yaml#/~1api~1v1~1notification-templates~1{templateId}~1submit-for-approval'
+  /api/v1/notification-templates/{templateId}/approval-decision:
+    $ref: './notification.yaml#/~1api~1v1~1notification-templates~1{templateId}~1approval-decision'
+  /api/v1/notification-preferences/me:
+    $ref: './notification.yaml#/~1api~1v1~1notification-preferences~1me'
+  /api/v1/notification-preferences/{userId}:
+    $ref: './notification.yaml#/~1api~1v1~1notification-preferences~1{userId}'
+  /api/v1/notification-preferences/{userId}/emergency-override:
+    $ref: './notification.yaml#/~1api~1v1~1notification-preferences~1{userId}~1emergency-override'
+  /api/v1/notifications/queue:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1queue'
+  /api/v1/notifications/queue/{notificationDispatchId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1queue~1{notificationDispatchId}'
+  /api/v1/notifications/schedule:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1schedule'
+  /api/v1/notifications/queue/{notificationDispatchId}/cancel:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1queue~1{notificationDispatchId}~1cancel'
+  /api/v1/notifications/queue/dead-letter:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1queue~1dead-letter'
+  /api/v1/notifications/history:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1history'
+  /api/v1/notifications/history/{notificationDispatchId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1history~1{notificationDispatchId}'
+  /api/v1/notifications/history/export:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1history~1export'
+  /api/v1/notifications/{notificationDispatchId}/retry:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1{notificationDispatchId}~1retry'
+  /api/v1/notifications/retry/bulk:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1retry~1bulk'
+  /api/v1/notifications/{notificationDispatchId}/retries:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1{notificationDispatchId}~1retries'
+  /api/v1/notification-providers:
+    $ref: './notification.yaml#/~1api~1v1~1notification-providers'
+  /api/v1/notification-providers/{providerType}:
+    $ref: './notification.yaml#/~1api~1v1~1notification-providers~1{providerType}'
+  /api/v1/notification-providers/{providerType}/test:
+    $ref: './notification.yaml#/~1api~1v1~1notification-providers~1{providerType}~1test'
+  /api/v1/notifications/broadcast:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1broadcast'
+  /api/v1/notifications/broadcast/{broadcastId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1broadcast~1{broadcastId}'
+  /api/v1/notifications/broadcast/{broadcastId}/cancel:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1broadcast~1{broadcastId}~1cancel'
+  /api/v1/notifications/bulk:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1bulk'
+  /api/v1/notifications/bulk/{bulkJobId}:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1bulk~1{bulkJobId}'
+  /api/v1/notifications/bulk/{bulkJobId}/cancel:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1bulk~1{bulkJobId}~1cancel'
+  /api/v1/notifications/analytics:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1analytics'
+  /api/v1/notifications/analytics/providers:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1analytics~1providers'
+  /api/v1/notifications/analytics/retries:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1analytics~1retries'
+  /api/v1/notifications/health:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1health'
+  /api/v1/notifications/health/providers:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1health~1providers'
+  /api/v1/notifications/health/queue:
+    $ref: './notification.yaml#/~1api~1v1~1notifications~1health~1queue'
+  # ============================================================
+  # Module 8 - Reports (reports.yaml)
+  # ============================================================
+  /api/v1/reports/dashboard/executive:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1dashboard~1executive'
+  /api/v1/reports/dashboard/widgets/{widgetKey}:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1dashboard~1widgets~1{widgetKey}'
+  /api/v1/reports/dashboard/widgets:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1dashboard~1widgets'
+  /api/v1/reports/kpis:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1kpis'
+  /api/v1/reports/complaints/summary:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1complaints~1summary'
+  /api/v1/reports/complaints/trend:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1complaints~1trend'
+  /api/v1/reports/complaints/category-breakdown:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1complaints~1category-breakdown'
+  /api/v1/reports/complaints/summary/drill-down:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1complaints~1summary~1drill-down'
+  /api/v1/reports/sla/compliance:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1sla~1compliance'
+  /api/v1/reports/sla/breach:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1sla~1breach'
+  /api/v1/reports/sla/trend:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1sla~1trend'
+  /api/v1/reports/officer-performance:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1officer-performance'
+  /api/v1/reports/officer-performance/leaderboard:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1officer-performance~1leaderboard'
+  /api/v1/reports/officer-performance/{officerId}/drill-down:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1officer-performance~1{officerId}~1drill-down'
+  /api/v1/reports/department-performance:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1department-performance'
+  /api/v1/reports/department-performance/comparison:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1department-performance~1comparison'
+  /api/v1/reports/department-performance/{departmentId}/drill-down:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1department-performance~1{departmentId}~1drill-down'
+  /api/v1/reports/ai-analytics/predictions:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1ai-analytics~1predictions'
+  /api/v1/reports/ai-analytics/classification-accuracy:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1ai-analytics~1classification-accuracy'
+  /api/v1/reports/citizen-service/satisfaction:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1citizen-service~1satisfaction'
+  /api/v1/reports/citizen-service/engagement:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1citizen-service~1engagement'
+  /api/v1/reports/citizen-service/channel-usage:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1citizen-service~1channel-usage'
+  /api/v1/reports/geographic/ward-wise:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1geographic~1ward-wise'
+  /api/v1/reports/geographic/zone-wise:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1geographic~1zone-wise'
+  /api/v1/reports/export:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1export'
+  /api/v1/reports/export/{exportJobId}:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1export~1{exportJobId}'
+  /api/v1/reports/export/{exportJobId}/download:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1export~1{exportJobId}~1download'
+  /api/v1/report-schedules:
+    $ref: './reports.yaml#/~1api~1v1~1report-schedules'
+  /api/v1/report-schedules/{scheduleId}:
+    $ref: './reports.yaml#/~1api~1v1~1report-schedules~1{scheduleId}'
+  /api/v1/report-templates:
+    $ref: './reports.yaml#/~1api~1v1~1report-templates'
+  /api/v1/report-templates/{reportTemplateId}:
+    $ref: './reports.yaml#/~1api~1v1~1report-templates~1{reportTemplateId}'
+  /api/v1/reports/{reportInstanceId}/shares:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1{reportInstanceId}~1shares'
+  /api/v1/reports/{reportInstanceId}/shares/{shareId}:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1{reportInstanceId}~1shares~1{shareId}'
+  /api/v1/report-permissions:
+    $ref: './reports.yaml#/~1api~1v1~1report-permissions'
+  /api/v1/reports/statistics/usage:
+    $ref: './reports.yaml#/~1api~1v1~1reports~1statistics~1usage'
+
+  # ============================================================
+  # Module 9 - Audit (audit.yaml)
+  # ============================================================
+  /api/v1/audit-logs:
+    $ref: './audit.yaml#/~1api~1v1~1audit-logs'
+  /api/v1/audit-logs/{auditLogId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit-logs~1{auditLogId}'
+  /api/v1/activity-logs:
+    $ref: './audit.yaml#/~1api~1v1~1activity-logs'
+  /api/v1/activity-logs/{activityLogId}:
+    $ref: './audit.yaml#/~1api~1v1~1activity-logs~1{activityLogId}'
+  /api/v1/activity-logs/users/{userId}/timeline:
+    $ref: './audit.yaml#/~1api~1v1~1activity-logs~1users~1{userId}~1timeline'
+  /api/v1/audit/login-history:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1login-history'
+  /api/v1/audit/login-history/{authEventId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1login-history~1{authEventId}'
+  /api/v1/audit/login-history/failed-attempts:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1login-history~1failed-attempts'
+  /api/v1/audit/configuration-changes:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1configuration-changes'
+  /api/v1/audit/configuration-changes/{configChangeId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1configuration-changes~1{configChangeId}'
+  /api/v1/audit/workflow-history:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1workflow-history'
+  /api/v1/audit/workflow-history/complaints/{complaintId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1workflow-history~1complaints~1{complaintId}'
+  /api/v1/audit/ai-decisions:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1ai-decisions'
+  /api/v1/audit/ai-decisions/{aiDecisionId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1ai-decisions~1{aiDecisionId}'
+  /api/v1/audit/notifications:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1notifications'
+  /api/v1/audit/notifications/{notificationDispatchId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1notifications~1{notificationDispatchId}'
+  /api/v1/audit/files:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1files'
+  /api/v1/audit/files/{fileAuditId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1files~1{fileAuditId}'
+  /api/v1/audit/security-events:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1security-events'
+  /api/v1/audit/security-events/{securityEventId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1security-events~1{securityEventId}'
+  /api/v1/audit/search:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1search'
+  /api/v1/audit/export:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1export'
+  /api/v1/audit/export/{exportJobId}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1export~1{exportJobId}'
+  /api/v1/audit/compliance-reports/{reportType}:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1compliance-reports~1{reportType}'
+  /api/v1/audit/compliance-reports:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1compliance-reports'
+  /api/v1/audit/retention-policy:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1retention-policy'
+  /api/v1/audit/retention-status:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1retention-status'
+  /api/v1/audit/dashboard:
+    $ref: './audit.yaml#/~1api~1v1~1audit~1dashboard'
+
+  # ============================================================
+  # Module 10 - File Management (file-management.yaml)
+  # ============================================================
+  /api/v1/files:
+    $ref: './file-management.yaml#/~1api~1v1~1files'
+  /api/v1/files/multipart:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1multipart'
+  /api/v1/files/multipart/{multipartUploadId}/complete:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1multipart~1{multipartUploadId}~1complete'
+  /api/v1/files/{fileId}/download:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1download'
+  /api/v1/files/{fileId}/preview:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1preview'
+  /api/v1/files/{fileId}/metadata:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1metadata'
+  /api/v1/files/{fileId}/versions:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1versions'
+  /api/v1/files/{fileId}/versions/{versionFileAssetId}:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1versions~1{versionFileAssetId}'
+  /api/v1/files/{fileId}/versions/{versionFileAssetId}/restore:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1versions~1{versionFileAssetId}~1restore'
+  /api/v1/files/{fileId}/share-links:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1share-links'
+  /api/v1/files/{fileId}/share-links/{shareLinkId}:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1share-links~1{shareLinkId}'
+  /api/v1/files/{fileId}/access:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1access'
+  /api/v1/files/{fileId}/access/{accessGrantId}:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1access~1{accessGrantId}'
+  /api/v1/files/{fileId}/virus-scan:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1virus-scan'
+  /api/v1/files/{fileId}/virus-scan/rescan:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1virus-scan~1rescan'
+  /api/v1/files/{fileId}/thumbnail:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1thumbnail'
+  /api/v1/files/{fileId}/reprocess:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1reprocess'
+  /api/v1/files/{fileId}/ocr:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1ocr'
+  /api/v1/files/search:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1search'
+  /api/v1/files/{fileId}/archive:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1archive'
+  /api/v1/files/archived:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1archived'
+  /api/v1/files/{fileId}/restore:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1restore'
+  /api/v1/files/{fileId}:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}'
+  /api/v1/files/storage-usage:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1storage-usage'
+  /api/v1/files/storage-usage/by-category:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1storage-usage~1by-category'
+  /api/v1/files/{fileId}/audit-trail:
+    $ref: './file-management.yaml#/~1api~1v1~1files~1{fileId}~1audit-trail'
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: './components/securitySchemes.yaml#/bearerAuth'
+
+  headers:
+    X-Correlation-Id:
+      $ref: './components/headers.yaml#/X-Correlation-Id'
+    X-Request-Id:
+      $ref: './components/headers.yaml#/X-Request-Id'
+    X-Tenant-Id:
+      $ref: './components/headers.yaml#/X-Tenant-Id'
+    Accept-Language:
+      $ref: './components/headers.yaml#/Accept-Language'
+    If-Match:
+      $ref: './components/headers.yaml#/If-Match'
+    Idempotency-Key:
+      $ref: './components/headers.yaml#/Idempotency-Key'
+
+  parameters:
+    page:
+      $ref: './components/parameters.yaml#/page'
+    size:
+      $ref: './components/parameters.yaml#/size'
+    cursor:
+      $ref: './components/parameters.yaml#/cursor'
+    sort:
+      $ref: './components/parameters.yaml#/sort'
+    order:
+      $ref: './components/parameters.yaml#/order'
+    search:
+      $ref: './components/parameters.yaml#/search'
+    include:
+      $ref: './components/parameters.yaml#/include'
+
+  requestBodies:
+    FileUploadMultipart:
+      $ref: './components/requestBodies.yaml#/FileUploadMultipart'
+    VoiceComplaintMultipart:
+      $ref: './components/requestBodies.yaml#/VoiceComplaintMultipart'
+
+  responses:
+    Success:
+      $ref: './components/responses.yaml#/Success'
+    Created:
+      $ref: './components/responses.yaml#/Created'
+    Accepted:
+      $ref: './components/responses.yaml#/Accepted'
+    NoContent:
+      $ref: './components/responses.yaml#/NoContent'
+    ValidationError:
+      $ref: './components/responses.yaml#/ValidationError'
+    Unauthorized:
+      $ref: './components/responses.yaml#/Unauthorized'
+    Forbidden:
+      $ref: './components/responses.yaml#/Forbidden'
+    NotFound:
+      $ref: './components/responses.yaml#/NotFound'
+    Conflict:
+      $ref: './components/responses.yaml#/Conflict'
+    TooManyRequests:
+      $ref: './components/responses.yaml#/TooManyRequests'
+    InternalServerError:
+      $ref: './components/responses.yaml#/InternalServerError'
+    ServiceUnavailable:
+      $ref: './components/responses.yaml#/ServiceUnavailable'
+    BusinessError:
+      $ref: './components/responses.yaml#/BusinessError'
+
+  schemas:
+    SuccessEnvelope:
+      $ref: './components/schemas.yaml#/SuccessEnvelope'
+    ErrorEnvelope:
+      $ref: './components/schemas.yaml#/ErrorEnvelope'
+    Pagination:
+      $ref: './components/schemas.yaml#/Pagination'
+    Metadata:
+      $ref: './components/schemas.yaml#/Metadata'
+    ValidationError:
+      $ref: './components/schemas.yaml#/ValidationError'
+    AsyncJob:
+      $ref: './components/schemas.yaml#/AsyncJob'
+    AuditMetadata:
+      $ref: './components/schemas.yaml#/AuditMetadata'
+    UserReference:
+      $ref: './components/schemas.yaml#/UserReference'
+    FileReference:
+      $ref: './components/schemas.yaml#/FileReference'
+    GeoPoint:
+      $ref: './components/schemas.yaml#/GeoPoint'
+    Address:
+      $ref: './components/schemas.yaml#/Address'
+    AIResult:
+      $ref: './components/schemas.yaml#/AIResult'
+    NotificationResult:
+      $ref: './components/schemas.yaml#/NotificationResult'
+    ReportResult:
+      $ref: './components/schemas.yaml#/ReportResult'
+

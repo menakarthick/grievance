@@ -1,0 +1,2656 @@
+/api/v1/notifications/sms:
+  post:
+    operationId: notificationSendSms
+    tags: [Notification]
+    summary: Send SMS Notification
+    description: >-
+      Channel-typed convenience view over the generic notification
+      pipeline (08-Notification-APIs.md Section 8.1.1). Blocked if the
+      recipient disabled SMS unless priority=emergency.
+      08-Notification-APIs.md Section 8.2.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [recipientUserId, templateKey, variables]
+            properties:
+              recipientUserId: { type: string }
+              templateKey: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              variables: { type: object }
+              priority: { type: string, enum: [normal, high, emergency] }
+    responses:
+      '202':
+        description: SMS queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/DispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: TEMPLATE_NOT_APPROVED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: CHANNEL_DISABLED_BY_RECIPIENT.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/sms/{notificationDispatchId}:
+  parameters:
+    - name: notificationDispatchId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetSmsStatus
+    tags: [Notification]
+    summary: Get SMS Notification Status
+    description: 08-Notification-APIs.md Section 8.2.2.
+    responses:
+      '200':
+        description: SMS dispatch status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ChannelStatusDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/sms/test:
+  post:
+    operationId: notificationTestSendSms
+    tags: [Notification]
+    summary: Test Send SMS Notification
+    description: >-
+      Real send to a designated test recipient; template may be draft
+      or pending_approval. 08-Notification-APIs.md Section 8.2.3.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [templateKey, languageCode, testMobileNumber, variables]
+            properties:
+              templateKey: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              testMobileNumber: { type: string }
+              variables: { type: object }
+    responses:
+      '202':
+        description: Test SMS queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TestDispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/email:
+  post:
+    operationId: notificationSendEmail
+    tags: [Notification]
+    summary: Send Email Notification
+    description: >-
+      Optionally with file_asset attachments (must be virus-scanned
+      clean). 08-Notification-APIs.md Section 8.3.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [recipientUserId, templateKey, variables]
+            properties:
+              recipientUserId: { type: string }
+              templateKey: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              variables: { type: object }
+              attachmentFileAssetIds:
+                type: array
+                items: { type: string }
+              priority: { type: string, enum: [normal, high, emergency] }
+    responses:
+      '202':
+        description: Email queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/DispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: TEMPLATE_NOT_APPROVED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: CHANNEL_DISABLED_BY_RECIPIENT or ATTACHMENT_NOT_SCANNED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/email/{notificationDispatchId}:
+  parameters:
+    - name: notificationDispatchId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetEmailStatus
+    tags: [Notification]
+    summary: Get Email Notification Status
+    description: 08-Notification-APIs.md Section 8.3.2.
+    responses:
+      '200':
+        description: Email dispatch status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ChannelStatusDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/email/test:
+  post:
+    operationId: notificationTestSendEmail
+    tags: [Notification]
+    summary: Test Send Email Notification
+    description: 08-Notification-APIs.md Section 8.3.3.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [templateKey, languageCode, testEmailAddress, variables]
+            properties:
+              templateKey: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              testEmailAddress: { type: string, format: email }
+              variables: { type: object }
+    responses:
+      '202':
+        description: Test email queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TestDispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/whatsapp:
+  post:
+    operationId: notificationSendWhatsapp
+    tags: [Notification]
+    summary: Send WhatsApp Notification
+    description: >-
+      templateKey must be a pre-approved WhatsApp Business template.
+      08-Notification-APIs.md Section 8.4.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [recipientUserId, templateKey, variables]
+            properties:
+              recipientUserId: { type: string }
+              templateKey: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              variables: { type: object }
+              priority: { type: string, enum: [normal, high, emergency] }
+    responses:
+      '202':
+        description: WhatsApp message queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/DispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: TEMPLATE_NOT_APPROVED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: CHANNEL_DISABLED_BY_RECIPIENT or RECIPIENT_NOT_OPTED_IN.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/whatsapp/{notificationDispatchId}:
+  parameters:
+    - name: notificationDispatchId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetWhatsappStatus
+    tags: [Notification]
+    summary: Get WhatsApp Notification Status
+    description: 08-Notification-APIs.md Section 8.4.2.
+    responses:
+      '200':
+        description: WhatsApp dispatch status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ChannelStatusDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/whatsapp/test:
+  post:
+    operationId: notificationTestSendWhatsapp
+    tags: [Notification]
+    summary: Test Send WhatsApp Notification
+    description: 08-Notification-APIs.md Section 8.4.3.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [templateKey, languageCode, testMobileNumber, variables]
+            properties:
+              templateKey: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              testMobileNumber: { type: string }
+              variables: { type: object }
+    responses:
+      '202':
+        description: Test WhatsApp message queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TestDispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/push:
+  post:
+    operationId: notificationSendPush
+    tags: [Notification]
+    summary: Send Push Notification
+    description: >-
+      Covers push_mobile/push_web/push_browser as one FCM/OneSignal-
+      abstracted pipeline. 08-Notification-APIs.md Section 8.5.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [recipientUserId, channel, templateKey, variables]
+            properties:
+              recipientUserId: { type: string }
+              channel:
+                type: string
+                enum: [push_mobile, push_web, push_browser]
+              templateKey: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              variables: { type: object }
+              deepLinkUrl: { type: string }
+              priority: { type: string, enum: [normal, high, emergency] }
+    responses:
+      '202':
+        description: Push notification queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/DispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: TEMPLATE_NOT_APPROVED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: CHANNEL_DISABLED_BY_RECIPIENT or NO_REGISTERED_DEVICE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/push/{notificationDispatchId}:
+  parameters:
+    - name: notificationDispatchId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetPushStatus
+    tags: [Notification]
+    summary: Get Push Notification Status
+    description: 08-Notification-APIs.md Section 8.5.2.
+    responses:
+      '200':
+        description: Push dispatch status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ChannelStatusDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/push/test:
+  post:
+    operationId: notificationTestSendPush
+    tags: [Notification]
+    summary: Test Send Push Notification
+    description: 08-Notification-APIs.md Section 8.5.3.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [templateKey, languageCode, testDeviceToken, channel, variables]
+            properties:
+              templateKey: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              testDeviceToken: { type: string }
+              channel:
+                type: string
+                enum: [push_mobile, push_web, push_browser]
+              variables: { type: object }
+    responses:
+      '202':
+        description: Test push notification queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TestDispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/in-app:
+  get:
+    operationId: notificationListInApp
+    tags: [Notification]
+    summary: List In-App Notifications
+    description: >-
+      Self-scoped notification inbox — no userId override, even for
+      Admin roles. 08-Notification-APIs.md Section 8.6.1.
+    parameters:
+      - name: status
+        in: query
+        schema: { type: string, enum: [unread, read, all], default: all }
+      - $ref: './components/parameters.yaml#/sort'
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    responses:
+      '200':
+        description: In-app notification inbox.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/InAppNotificationSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+
+/api/v1/notifications/in-app/{notificationDispatchId}:
+  parameters:
+    - name: notificationDispatchId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetInApp
+    tags: [Notification]
+    summary: Get In-App Notification
+    description: 08-Notification-APIs.md Section 8.6.2.
+    responses:
+      '200':
+        description: In-app notification detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/InAppNotificationDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/in-app/{notificationDispatchId}/read:
+  patch:
+    operationId: notificationMarkInAppRead
+    tags: [Notification]
+    summary: Mark In-App Notification as Read
+    description: >-
+      Idempotent — marking an already-read notification returns the
+      existing readAt unchanged. 08-Notification-APIs.md Section
+      8.6.3.
+    parameters:
+      - name: notificationDispatchId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      '200':
+        description: Notification marked read.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        notificationDispatchId: { type: string }
+                        status: { type: string, enum: [read] }
+                        readAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/in-app/read-all:
+  post:
+    operationId: notificationMarkAllInAppRead
+    tags: [Notification]
+    summary: Mark All In-App Notifications as Read
+    description: 08-Notification-APIs.md Section 8.6.4.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    responses:
+      '200':
+        description: All unread notifications marked read.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        markedCount: { type: integer }
+                        readAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+
+/api/v1/notifications/in-app/unread-count:
+  get:
+    operationId: notificationGetUnreadCount
+    tags: [Notification]
+    summary: Get Unread Notification Count
+    description: >-
+      Deliberately lightweight (a COUNT, not a list fetch) for a
+      portal notification-bell badge. 08-Notification-APIs.md Section
+      8.6.5.
+    responses:
+      '200':
+        description: Unread count.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        unreadCount: { type: integer }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+
+/api/v1/notification-templates:
+  get:
+    operationId: notificationListTemplates
+    tags: [Notification]
+    summary: List Notification Templates
+    description: 08-Notification-APIs.md Section 8.7.1.
+    parameters:
+      - name: eventType
+        in: query
+        schema: { type: string }
+      - name: channel
+        in: query
+        schema: { type: string }
+      - name: languageCode
+        in: query
+        schema: { type: string, enum: [ta, en] }
+      - name: approvalStatus
+        in: query
+        schema:
+          type: string
+          enum: [draft, pending_approval, approved, rejected]
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Template list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/TemplateSummary'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+  post:
+    operationId: notificationCreateTemplate
+    tags: [Notification]
+    summary: Create Notification Template
+    description: >-
+      Starts approvalStatus=draft; cannot be used for production send
+      until approved. 08-Notification-APIs.md Section 8.7.2.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [eventType, channel, languageCode, bodyTemplate]
+            properties:
+              eventType: { type: string }
+              channel:
+                type: string
+                enum: [sms, email, whatsapp, push_mobile, push_web, push_browser, in_app]
+              languageCode: { type: string, enum: [ta, en] }
+              bodyTemplate: { type: string }
+              htmlBodyTemplate: { type: string }
+              subjectTemplate: { type: string }
+    responses:
+      '201':
+        description: Template created (version 1, draft).
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TemplateSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notification-templates/{templateId}:
+  parameters:
+    - name: templateId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetTemplate
+    tags: [Notification]
+    summary: Get Notification Template
+    description: 08-Notification-APIs.md Section 8.7.3.
+    responses:
+      '200':
+        description: Template detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TemplateDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: notificationUpdateTemplate
+    tags: [Notification]
+    summary: Update Notification Template (New Version)
+    description: >-
+      Optimistic concurrency via expectedVersion; any content change
+      re-enters the approval workflow at draft.
+      08-Notification-APIs.md Section 8.7.4.
+    parameters:
+      - $ref: '#/components/parameters/IfMatchHeader'
+        allowEmptyValue: false
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [expectedVersion]
+            properties:
+              bodyTemplate: { type: string }
+              htmlBodyTemplate: { type: string }
+              subjectTemplate: { type: string }
+              expectedVersion: { type: integer }
+    responses:
+      '200':
+        description: New version created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TemplateSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: CONCURRENT_MODIFICATION.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  delete:
+    operationId: notificationDeleteTemplate
+    tags: [Notification]
+    summary: Delete Notification Template (Deactivate)
+    description: 08-Notification-APIs.md Section 8.7.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notification-templates/{templateId}/versions:
+  parameters:
+    - name: templateId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationListTemplateVersions
+    tags: [Notification]
+    summary: List Notification Template Versions
+    description: 08-Notification-APIs.md Section 8.7.6.
+    parameters:
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Template version history.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/TemplateVersion'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notification-templates/{templateId}/preview:
+  post:
+    operationId: notificationPreviewTemplate
+    tags: [Notification]
+    summary: Preview Notification Template
+    description: >-
+      Pure render, no dispatch row created. 08-Notification-APIs.md
+      Section 8.7.7.
+    parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [sampleVariables]
+            properties:
+              sampleVariables: { type: object }
+    responses:
+      '200':
+        description: Rendered preview.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        renderedSubject: { type: string }
+                        renderedBody: { type: string }
+                        renderedHtmlBody: { type: string }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notification-templates/{templateId}/test-send:
+  post:
+    operationId: notificationTemplateTestSend
+    tags: [Notification]
+    summary: Test Send Notification Template
+    description: >-
+      Generic, channel-agnostic test-send wrapper equivalent to the
+      channel-specific test-send endpoints (8.2.3/8.3.3/8.4.3/8.5.3).
+      08-Notification-APIs.md Section 8.7.8.
+    parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [testRecipient, variables]
+            properties:
+              testRecipient: { type: string }
+              variables: { type: object }
+    responses:
+      '202':
+        description: Test send queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TestDispatchAck'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notification-templates/{templateId}/submit-for-approval:
+  post:
+    operationId: notificationSubmitTemplateForApproval
+    tags: [Notification]
+    summary: Submit Notification Template for Approval
+    description: >-
+      Moves a draft/rejected template to pending_approval; naturally
+      idempotent. 08-Notification-APIs.md Section 8.7.9.
+    parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              submissionNote: { type: string }
+    responses:
+      '200':
+        description: Template submitted for approval.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        approvalStatus: { type: string, enum: [pending_approval] }
+                        submittedAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: INVALID_APPROVAL_STATE_TRANSITION.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notification-templates/{templateId}/approval-decision:
+  post:
+    operationId: notificationRecordTemplateApprovalDecision
+    tags: [Notification]
+    summary: Record Notification Template Approval Decision
+    description: >-
+      Approve or reject a pending_approval template; only an approved
+      template may be used for production sends.
+      08-Notification-APIs.md Section 8.7.10.
+    parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [decision]
+            properties:
+              decision: { type: string, enum: [approved, rejected] }
+              reviewNote: { type: string }
+    responses:
+      '200':
+        description: Approval decision recorded.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        approvalStatus: { type: string, enum: [approved, rejected] }
+                        decidedBy:
+                          $ref: './components/schemas.yaml#/UserReference'
+                        decidedAt: { type: string, format: date-time }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: TEMPLATE_NOT_PENDING_APPROVAL.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notification-preferences/me:
+  get:
+    operationId: notificationGetMyPreferences
+    tags: [Notification]
+    summary: Get My Notification Preferences
+    description: >-
+      Generalizes the Section 3.5 citizen-only shortcut to every user
+      type, adding quiet hours/category opt-outs.
+      08-Notification-APIs.md Section 8.8.1.
+    responses:
+      '200':
+        description: Preference profile.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/PreferenceProfile'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  patch:
+    operationId: notificationUpdateMyPreferences
+    tags: [Notification]
+    summary: Update My Notification Preferences
+    description: >-
+      Optimistic concurrency via expectedVersion; category opt-outs
+      never suppress Emergency Override. 08-Notification-APIs.md
+      Section 8.8.2.
+    parameters:
+      - $ref: '#/components/parameters/IfMatchHeader'
+        allowEmptyValue: false
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [expectedVersion]
+            properties:
+              channels:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    channel: { type: string }
+                    isEnabled: { type: boolean }
+              quietHours:
+                type: object
+                properties:
+                  startTime: { type: string }
+                  endTime: { type: string }
+                  timezone: { type: string }
+              languageCode: { type: string, enum: [ta, en] }
+              categoryOptOuts:
+                type: array
+                items: { type: string }
+              expectedVersion: { type: integer }
+    responses:
+      '200':
+        description: Preferences updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/PreferenceProfile'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '409':
+        description: CONCURRENT_MODIFICATION.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: ALL_CHANNELS_DISABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notification-preferences/{userId}:
+  parameters:
+    - name: userId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetUserPreferences
+    tags: [Notification]
+    summary: Get User Notification Preferences (Admin View)
+    description: >-
+      Read-only Admin support/troubleshooting view; never permits
+      Admin-initiated writes to another user's preferences.
+      08-Notification-APIs.md Section 8.8.3.
+    responses:
+      '200':
+        description: Target user's preference profile.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/PreferenceProfile'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notification-preferences/{userId}/emergency-override:
+  post:
+    operationId: notificationSetEmergencyOverride
+    tags: [Notification]
+    summary: Set Emergency Override
+    description: >-
+      One-time bypass for this specific dispatch only — never modifies
+      the recipient's stored preference row. Most audit-sensitive
+      endpoint in Section 8. 08-Notification-APIs.md Section 8.8.4.
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [templateKey, channel, variables, justification]
+            properties:
+              templateKey: { type: string }
+              channel:
+                type: string
+                enum: [sms, email, whatsapp, push_mobile, push_web, push_browser]
+              variables: { type: object }
+              justification: { type: string, minLength: 10 }
+    responses:
+      '202':
+        description: Override dispatch queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        notificationDispatchId: { type: string }
+                        channel: { type: string }
+                        status: { type: string, enum: [queued] }
+                        overrideApplied: { type: boolean, enum: [true] }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/queue:
+  get:
+    operationId: notificationListQueue
+    tags: [Notification]
+    summary: List Queued Notifications
+    description: >-
+      Durable MySQL mirror of Redis-resident queue state
+      (ARCHITECTURE.md §16); a small expected lag exists.
+      08-Notification-APIs.md Section 8.9.1.
+    parameters:
+      - name: channel
+        in: query
+        schema: { type: string }
+      - name: priority
+        in: query
+        schema: { type: string, enum: [normal, high, emergency] }
+      - $ref: './components/parameters.yaml#/sort'
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, maximum: 200 }
+    responses:
+      '200':
+        description: Queued notification list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/QueueItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/queue/{notificationDispatchId}:
+  parameters:
+    - name: notificationDispatchId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetQueueItem
+    tags: [Notification]
+    summary: Get Queue Item Detail
+    description: 08-Notification-APIs.md Section 8.9.2.
+    responses:
+      '200':
+        description: Queue item detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      allOf:
+                        - $ref: '#/components/schemas/QueueItem'
+                        - type: object
+                          properties:
+                            retryCount: { type: integer }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/schedule:
+  post:
+    operationId: notificationSchedule
+    tags: [Notification]
+    summary: Schedule Notification
+    description: >-
+      Exactly one of scheduledAt/delaySeconds; released into the
+      active queue by the Scheduler at scheduledAt.
+      08-Notification-APIs.md Section 8.9.3.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [recipientUserId, channel, templateKey, variables]
+            properties:
+              recipientUserId: { type: string }
+              channel: { type: string }
+              templateKey: { type: string }
+              variables: { type: object }
+              scheduledAt: { type: string, format: date-time }
+              delaySeconds: { type: integer }
+    responses:
+      '202':
+        description: Notification scheduled.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        notificationDispatchId: { type: string }
+                        channel: { type: string }
+                        status: { type: string, enum: [queued] }
+                        scheduledAt: { type: string, format: date-time }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notifications/queue/{notificationDispatchId}/cancel:
+  post:
+    operationId: notificationCancelQueued
+    tags: [Notification]
+    summary: Cancel Queued Notification
+    description: >-
+      Terminal state transition, naturally idempotent.
+      08-Notification-APIs.md Section 8.9.4.
+    parameters:
+      - name: notificationDispatchId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reason: { type: string }
+    responses:
+      '200':
+        description: Notification cancelled.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        notificationDispatchId: { type: string }
+                        status: { type: string, enum: [cancelled] }
+                        cancelledAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: NOTIFICATION_ALREADY_SENT.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notifications/queue/dead-letter:
+  get:
+    operationId: notificationListDeadLetter
+    tags: [Notification]
+    summary: List Dead Letter Queue Items
+    description: >-
+      Notifications that exhausted their retry budget.
+      08-Notification-APIs.md Section 8.9.5.
+    parameters:
+      - name: channel
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/sort'
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, maximum: 200 }
+    responses:
+      '200':
+        description: Dead-letter item list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/DeadLetterItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/history:
+  get:
+    operationId: notificationListHistory
+    tags: [Notification]
+    summary: List Notification History
+    description: >-
+      Citizen callers always self-scoped server-side regardless of
+      any recipientUserId supplied. 08-Notification-APIs.md Section
+      8.10.1.
+    parameters:
+      - name: recipientUserId
+        in: query
+        schema: { type: string }
+      - name: complaintId
+        in: query
+        schema: { type: string }
+      - name: channel
+        in: query
+        schema: { type: string }
+      - name: status
+        in: query
+        schema: { type: string }
+      - name: filter[sentAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[sentAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/sort'
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, maximum: 100 }
+    responses:
+      '200':
+        description: Notification history list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/HistoryItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/history/{notificationDispatchId}:
+  parameters:
+    - name: notificationDispatchId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetHistoryDetail
+    tags: [Notification]
+    summary: Get Notification History Detail
+    description: >-
+      Full rendered content only returned to the recipient or a
+      scoped-permission Admin. 08-Notification-APIs.md Section
+      8.10.2.
+    responses:
+      '200':
+        description: Notification history detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/HistoryDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/history/export:
+  get:
+    operationId: notificationExportHistory
+    tags: [Notification]
+    summary: Export Notification History
+    description: >-
+      Asynchronous export (CSV/PDF), same pattern as Reports export
+      (API_SPECIFICATION.md §9.8). 08-Notification-APIs.md Section
+      8.10.3.
+    parameters:
+      - name: format
+        in: query
+        required: true
+        schema: { type: string, enum: [csv, pdf] }
+      - name: recipientUserId
+        in: query
+        schema: { type: string }
+      - name: complaintId
+        in: query
+        schema: { type: string }
+      - name: channel
+        in: query
+        schema: { type: string }
+      - name: status
+        in: query
+        schema: { type: string }
+    responses:
+      '202':
+        description: Export job queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: './components/schemas.yaml#/AsyncJob'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+
+/api/v1/notifications/{notificationDispatchId}/retry:
+  post:
+    operationId: notificationRetry
+    tags: [Notification]
+    summary: Retry Failed Notification
+    description: >-
+      Manual retry resets automatic backoff and re-attempts at normal
+      priority, never silently escalating. 08-Notification-APIs.md
+      Section 8.11.1.
+    parameters:
+      - name: notificationDispatchId
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    responses:
+      '202':
+        description: Notification re-queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        notificationDispatchId: { type: string }
+                        status: { type: string, enum: [retried] }
+                        retryCount: { type: integer }
+                        requeuedAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: NOTIFICATION_NOT_RETRYABLE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notifications/retry/bulk:
+  post:
+    operationId: notificationBulkRetry
+    tags: [Notification]
+    summary: Bulk Retry Failed Notifications
+    description: >-
+      Re-queues every notification matching a filter; matched count
+      capped per call (e.g. 10,000). 08-Notification-APIs.md Section
+      8.11.2.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [filter]
+            properties:
+              channel: { type: string }
+              filter:
+                type: object
+                required: [status]
+                properties:
+                  createdAt:
+                    type: object
+                    properties:
+                      gte: { type: string, format: date-time }
+                      lte: { type: string, format: date-time }
+                  status: { type: string, enum: [failed, dead_letter] }
+    responses:
+      '202':
+        description: Bulk retry job queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        bulkRetryJobId: { type: string }
+                        matchedCount: { type: integer }
+                        status: { type: string, enum: [queued] }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '422':
+        description: MATCH_COUNT_EXCEEDS_LIMIT.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notifications/{notificationDispatchId}/retries:
+  get:
+    operationId: notificationGetRetryHistory
+    tags: [Notification]
+    summary: Get Retry History for a Notification
+    description: 08-Notification-APIs.md Section 8.11.3.
+    parameters:
+      - name: notificationDispatchId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      '200':
+        description: Retry attempt history.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/RetryAttempt'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notification-providers:
+  get:
+    operationId: notificationListProviders
+    tags: [Notification]
+    summary: List Notification Providers
+    description: >-
+      Read-oriented, notification-scoped view of provider_config,
+      filtered to sms/email/whatsapp/push. Mutating select-active-
+      provider remains PUT /api/v1/providers/{providerType}
+      (06-Administration-APIs.md §6.11.2), never duplicated here.
+      08-Notification-APIs.md Section 8.12.1.
+    parameters:
+      - name: channel
+        in: query
+        schema: { type: string, enum: [sms, email, whatsapp, push] }
+    responses:
+      '200':
+        description: Notification provider list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/NotificationProviderSummary'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notification-providers/{providerType}:
+  parameters:
+    - name: providerType
+      in: path
+      required: true
+      schema: { type: string, enum: [sms, email, whatsapp, push] }
+  get:
+    operationId: notificationGetProvider
+    tags: [Notification]
+    summary: Get Notification Provider Detail
+    description: 08-Notification-APIs.md Section 8.12.2.
+    responses:
+      '200':
+        description: Provider detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/NotificationProviderSummary'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notification-providers/{providerType}/test:
+  post:
+    operationId: notificationTestProviderConnectivity
+    tags: [Notification]
+    summary: Test Notification Provider Connectivity
+    description: >-
+      Connectivity/authentication probe only — never sends a message
+      to an end recipient. 08-Notification-APIs.md Section 8.12.3.
+    parameters:
+      - name: providerType
+        in: path
+        required: true
+        schema: { type: string, enum: [sms, email, whatsapp, push] }
+    responses:
+      '200':
+        description: Connectivity check result.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        providerType: { type: string }
+                        providerName: { type: string }
+                        reachable: { type: boolean }
+                        latencyMs: { type: integer }
+                        checkedAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+
+/api/v1/notifications/broadcast:
+  post:
+    operationId: notificationCreateBroadcast
+    tags: [Notification]
+    summary: Create Broadcast Notification
+    description: >-
+      One notification_event fanning out to many notification_dispatch
+      rows across a resolved administrative scope. Emergency priority
+      behaves as a scope-wide Emergency Override. 08-Notification-
+      APIs.md Section 8.13.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [scopeType, channels, templateKey, variables]
+            properties:
+              scopeType:
+                type: string
+                enum: [ward, zone, district, department, tenant]
+              scopeId: { type: string }
+              channels:
+                type: array
+                items: { type: string }
+              templateKey: { type: string }
+              variables: { type: object }
+              priority: { type: string, enum: [normal, high, emergency] }
+    responses:
+      '202':
+        description: Broadcast queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        broadcastId: { type: string }
+                        status: { type: string, enum: [queued] }
+                        estimatedRecipientCount: { type: integer }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: SCOPE_NOT_FOUND or TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: TEMPLATE_NOT_APPROVED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  get:
+    operationId: notificationListBroadcasts
+    tags: [Notification]
+    summary: List Broadcasts
+    description: 08-Notification-APIs.md Section 8.13.2.
+    parameters:
+      - name: scopeType
+        in: query
+        schema: { type: string }
+      - name: status
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/sort'
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, maximum: 100 }
+    responses:
+      '200':
+        description: Broadcast history.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/BroadcastSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/broadcast/{broadcastId}:
+  parameters:
+    - name: broadcastId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetBroadcastStatus
+    tags: [Notification]
+    summary: Get Broadcast Status
+    description: >-
+      Counts are eventually consistent while status=in_progress.
+      08-Notification-APIs.md Section 8.13.3.
+    responses:
+      '200':
+        description: Broadcast fan-out status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/BroadcastDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/broadcast/{broadcastId}/cancel:
+  post:
+    operationId: notificationCancelBroadcast
+    tags: [Notification]
+    summary: Cancel Broadcast
+    description: >-
+      Optimistic concurrency via expectedStatus; already-dispatched
+      individual notifications are never recalled.
+      08-Notification-APIs.md Section 8.13.4.
+    parameters:
+      - name: broadcastId
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/IfMatchHeader'
+        allowEmptyValue: false
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [reason, expectedStatus]
+            properties:
+              reason: { type: string }
+              expectedStatus: { type: string, enum: [queued, in_progress] }
+    responses:
+      '200':
+        description: Broadcast cancelled.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        broadcastId: { type: string }
+                        status: { type: string, enum: [cancelled] }
+                        recipientsNotYetDispatched: { type: integer }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: BROADCAST_ALREADY_COMPLETED or CONCURRENT_MODIFICATION.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notifications/bulk:
+  post:
+    operationId: notificationCreateBulkJob
+    tags: [Notification]
+    summary: Create Bulk Notification Job
+    description: >-
+      Explicit recipient list (max 5,000/call), distinct from
+      Broadcast's resolved administrative scope. Each recipient's own
+      preference is respected — no override mode.
+      08-Notification-APIs.md Section 8.14.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [recipientUserIds, channel, templateKey, variables]
+            properties:
+              recipientUserIds:
+                type: array
+                minItems: 1
+                maxItems: 5000
+                items: { type: string }
+              channel: { type: string }
+              templateKey: { type: string }
+              variables: { type: object }
+    responses:
+      '202':
+        description: Bulk job queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        bulkJobId: { type: string }
+                        status: { type: string, enum: [queued] }
+                        recipientCount: { type: integer }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: TEMPLATE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: TEMPLATE_NOT_APPROVED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '422':
+        description: RECIPIENT_LIST_EXCEEDS_LIMIT.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notifications/bulk/{bulkJobId}:
+  parameters:
+    - name: bulkJobId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: notificationGetBulkJobStatus
+    tags: [Notification]
+    summary: Get Bulk Notification Job Status
+    description: 08-Notification-APIs.md Section 8.14.2.
+    responses:
+      '200':
+        description: Bulk job status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/BulkJobDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/notifications/bulk/{bulkJobId}/cancel:
+  post:
+    operationId: notificationCancelBulkJob
+    tags: [Notification]
+    summary: Cancel Bulk Notification Job
+    description: >-
+      Optimistic concurrency via expectedStatus, same guard as
+      Broadcast Cancel. 08-Notification-APIs.md Section 8.14.3.
+    parameters:
+      - name: bulkJobId
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/IfMatchHeader'
+        allowEmptyValue: false
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [reason, expectedStatus]
+            properties:
+              reason: { type: string }
+              expectedStatus: { type: string, enum: [queued, in_progress] }
+    responses:
+      '200':
+        description: Bulk job cancelled.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        bulkJobId: { type: string }
+                        status: { type: string, enum: [cancelled] }
+                        recipientsNotYetProcessed: { type: integer }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: JOB_ALREADY_COMPLETED or CONCURRENT_MODIFICATION.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/notifications/analytics:
+  get:
+    operationId: notificationAnalyticsSummary
+    tags: [Notification]
+    summary: Get Notification Analytics Summary
+    description: >-
+      Pre-aggregated by a scheduled job, never live-aggregated. Test
+      sends and preview renders excluded from every metric.
+      08-Notification-APIs.md Section 8.15.1.
+    parameters:
+      - name: channel
+        in: query
+        schema: { type: string }
+      - name: departmentId
+        in: query
+        schema: { type: string }
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        description: Analytics summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        deliveryRatePercent: { type: number }
+                        failureRatePercent: { type: number }
+                        readRatePercent: { type: number }
+                        openRatePercent: { type: number }
+                        clickRatePercent: { type: number }
+                        averageDeliveryTimeSeconds: { type: number }
+                        totalDispatched: { type: integer }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/analytics/providers:
+  get:
+    operationId: notificationProviderAnalytics
+    tags: [Notification]
+    summary: Get Provider Performance Analytics
+    description: 08-Notification-APIs.md Section 8.15.2.
+    parameters:
+      - name: channel
+        in: query
+        required: true
+        schema: { type: string }
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        description: Provider performance comparison.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          providerName: { type: string }
+                          deliveryRatePercent: { type: number }
+                          averageLatencyMs: { type: number }
+                          totalDispatched: { type: integer }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/analytics/retries:
+  get:
+    operationId: notificationRetryAnalytics
+    tags: [Notification]
+    summary: Get Retry Statistics
+    description: 08-Notification-APIs.md Section 8.15.3.
+    parameters:
+      - name: channel
+        in: query
+        schema: { type: string }
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        description: Retry statistics.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        totalRetries: { type: integer }
+                        eventualSuccessRatePercent: { type: number }
+                        deadLetterCount: { type: integer }
+                        averageAttemptsToSuccess: { type: number }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/health:
+  get:
+    operationId: notificationServiceHealth
+    tags: [Notification]
+    summary: Get Notification Service Health
+    description: >-
+      Composite provider reachability plus queue health, consistent
+      with the /healthz pattern (ARCHITECTURE.md §15).
+      08-Notification-APIs.md Section 8.16.1.
+    responses:
+      '200':
+        description: Composite health status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        overallStatus:
+                          type: string
+                          enum: [healthy, degraded, unhealthy]
+                        providers:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              providerType: { type: string }
+                              reachable: { type: boolean }
+                        queueDepth: { type: integer }
+                        checkedAt: { type: string, format: date-time }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/health/providers:
+  get:
+    operationId: notificationProviderHealth
+    tags: [Notification]
+    summary: Get Provider Health Detail
+    description: 08-Notification-APIs.md Section 8.16.2.
+    parameters:
+      - name: channel
+        in: query
+        schema: { type: string }
+    responses:
+      '200':
+        description: Per-provider health detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          channel: { type: string }
+                          providerName: { type: string }
+                          reachable: { type: boolean }
+                          lastCheckedAt: { type: string, format: date-time }
+                          consecutiveFailureCount: { type: integer }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/notifications/health/queue:
+  get:
+    operationId: notificationQueueHealth
+    tags: [Notification]
+    summary: Get Queue Health
+    description: >-
+      Redis-backed queue depth, consumer lag, and dead-letter backlog.
+      08-Notification-APIs.md Section 8.16.3.
+    responses:
+      '200':
+        description: Queue health detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        queueDepth: { type: integer }
+                        consumerLagSeconds: { type: number }
+                        deadLetterCount: { type: integer }
+                        oldestQueuedItemAgeSeconds: { type: number }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+components:
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: >-
+        Recommended for send/dispatch-creating operations to prevent
+        duplicate delivery on client retry.
+      schema:
+        type: string
+    IfMatchHeader:
+      name: If-Match
+      in: header
+      required: true
+      description: >-
+        Optimistic-concurrency precondition carrying the caller's
+        last-known version, required on the concurrency-guarded
+        notification template/preference update endpoints
+        (08-Notification-APIs.md Sections 8.7.4, 8.8.2, 8.13.4, 8.14.3).
+      schema:
+        type: string
+  schemas:
+    DispatchAck:
+      type: object
+      properties:
+        notificationDispatchId: { type: string }
+        channel: { type: string }
+        status: { type: string, enum: [queued] }
+        providerMessageId: { type: string }
+    TestDispatchAck:
+      type: object
+      properties:
+        notificationDispatchId: { type: string }
+        channel: { type: string }
+        status: { type: string, enum: [queued] }
+        isTestSend: { type: boolean, enum: [true] }
+    ChannelStatusDetail:
+      type: object
+      properties:
+        notificationDispatchId: { type: string }
+        channel: { type: string }
+        status: { type: string }
+        providerMessageId: { type: string }
+        sentAt: { type: string, format: date-time }
+        deliveredAt: { type: string, format: date-time }
+        openedAt: { type: string, format: date-time }
+        readAt: { type: string, format: date-time }
+        clickedAt: { type: string, format: date-time }
+    InAppNotificationSummary:
+      type: object
+      properties:
+        notificationDispatchId: { type: string }
+        templateKey: { type: string }
+        renderedTitle: { type: string }
+        renderedBody: { type: string }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+        readAt: { type: string, format: date-time }
+    InAppNotificationDetail:
+      allOf:
+        - $ref: '#/components/schemas/InAppNotificationSummary'
+        - type: object
+          properties:
+            linkedEntityType: { type: string }
+            linkedEntityId: { type: string }
+    TemplateSummary:
+      type: object
+      properties:
+        id: { type: string }
+        eventType: { type: string }
+        channel: { type: string }
+        languageCode: { type: string, enum: [ta, en] }
+        version: { type: integer }
+        approvalStatus:
+          type: string
+          enum: [draft, pending_approval, approved, rejected]
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    TemplateDetail:
+      allOf:
+        - $ref: '#/components/schemas/TemplateSummary'
+        - type: object
+          properties:
+            bodyTemplate: { type: string }
+            htmlBodyTemplate: { type: string }
+            subjectTemplate: { type: string }
+            updatedAt: { type: string, format: date-time }
+    TemplateVersion:
+      type: object
+      properties:
+        version: { type: integer }
+        approvalStatus: { type: string }
+        changedBy:
+          $ref: './components/schemas.yaml#/UserReference'
+        effectiveFrom: { type: string, format: date-time }
+        effectiveTo: { type: [string, "null"], format: date-time }
+    PreferenceProfile:
+      type: object
+      properties:
+        channels:
+          type: array
+          items:
+            type: object
+            properties:
+              channel: { type: string }
+              isEnabled: { type: boolean }
+        quietHours:
+          type: object
+          properties:
+            startTime: { type: string }
+            endTime: { type: string }
+            timezone: { type: string }
+        languageCode: { type: string, enum: [ta, en] }
+        categoryOptOuts:
+          type: array
+          items: { type: string }
+        version: { type: integer }
+    QueueItem:
+      type: object
+      properties:
+        notificationDispatchId: { type: string }
+        channel: { type: string }
+        priority: { type: string }
+        status: { type: string }
+        queuedAt: { type: string, format: date-time }
+        scheduledAt: { type: string, format: date-time }
+    DeadLetterItem:
+      type: object
+      properties:
+        notificationDispatchId: { type: string }
+        channel: { type: string }
+        retryCount: { type: integer }
+        lastFailureReason: { type: string }
+        lastAttemptAt: { type: string, format: date-time }
+    HistoryItem:
+      type: object
+      properties:
+        id: { type: string }
+        channel: { type: string }
+        templateKey: { type: string }
+        status: { type: string }
+        providerMessageId: { type: string }
+        sentAt: { type: string, format: date-time }
+        deliveredAt: { type: string, format: date-time }
+    HistoryDetail:
+      type: object
+      properties:
+        id: { type: string }
+        channel: { type: string }
+        templateKey: { type: string }
+        renderedSubject: { type: string }
+        renderedBody: { type: string }
+        status: { type: string }
+        retryCount: { type: integer }
+        sentAt: { type: string, format: date-time }
+        deliveredAt: { type: string, format: date-time }
+        readAt: { type: string, format: date-time }
+        linkedComplaintId: { type: string }
+    RetryAttempt:
+      type: object
+      properties:
+        attemptNumber: { type: integer }
+        attemptedAt: { type: string, format: date-time }
+        outcome: { type: string }
+        failureReason: { type: string }
+    NotificationProviderSummary:
+      type: object
+      properties:
+        providerType: { type: string, enum: [sms, email, whatsapp, push] }
+        providerName: { type: string }
+        isActive: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+    BroadcastSummary:
+      type: object
+      properties:
+        broadcastId: { type: string }
+        scopeType: { type: string }
+        scopeId: { type: string }
+        status: { type: string }
+        recipientCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+    BroadcastDetail:
+      type: object
+      properties:
+        broadcastId: { type: string }
+        status:
+          type: string
+          enum: [queued, in_progress, completed, cancelled]
+        recipientCount: { type: integer }
+        sentCount: { type: integer }
+        deliveredCount: { type: integer }
+        failedCount: { type: integer }
+    BulkJobDetail:
+      type: object
+      properties:
+        bulkJobId: { type: string }
+        status:
+          type: string
+          enum: [queued, in_progress, completed, cancelled]
+        recipientCount: { type: integer }
+        sentCount: { type: integer }
+        failedCount: { type: integer }

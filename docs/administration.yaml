@@ -1,0 +1,1547 @@
+/api/v1/departments:
+  get:
+    operationId: adminListDepartments
+    tags: [Administration]
+    summary: List Departments
+    description: >-
+      List the tenant's department list, for Admin Portal screens and
+      routing dropdowns platform-wide. 06-Administration-APIs.md Section
+      6.1.1.
+    parameters:
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Department list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Department'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: adminCreateDepartment
+    tags: [Administration]
+    summary: Create Department
+    description: >-
+      Add a new department to the tenant's configurable department list.
+      06-Administration-APIs.md Section 6.1.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, name]
+            properties:
+              code:
+                type: string
+                pattern: '^[A-Z0-9]{2,10}$'
+              name:
+                type: string
+                minLength: 2
+                maxLength: 100
+    responses:
+      '201':
+        description: Department created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Department'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '409':
+        description: DEPARTMENT_CODE_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/departments/{departmentId}:
+  parameters:
+    - name: departmentId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: adminGetDepartment
+    tags: [Administration]
+    summary: Get Department
+    description: 06-Administration-APIs.md Section 6.1.3.
+    responses:
+      '200':
+        description: Department detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Department'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: adminUpdateDepartment
+    tags: [Administration]
+    summary: Update Department
+    description: >-
+      Rename a department or toggle its active state. code is immutable.
+      06-Administration-APIs.md Section 6.1.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, minLength: 2, maxLength: 100 }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: Department updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Department'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  delete:
+    operationId: adminDeleteDepartment
+    tags: [Administration]
+    summary: Delete Department (Deactivate)
+    description: 06-Administration-APIs.md Section 6.1.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/complaint-categories:
+  get:
+    operationId: adminListComplaintCategories
+    tags: [Administration]
+    summary: List Categories
+    description: 06-Administration-APIs.md Section 6.2.1.
+    parameters:
+      - name: departmentId
+        in: query
+        schema: { type: string }
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Category list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ComplaintCategory'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: adminCreateComplaintCategory
+    tags: [Administration]
+    summary: Create Category
+    description: 06-Administration-APIs.md Section 6.2.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [departmentId, name, defaultPriority]
+            properties:
+              departmentId: { type: string }
+              name: { type: string }
+              defaultPriority:
+                type: string
+                enum: [low, medium, high, critical]
+    responses:
+      '201':
+        description: Category created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ComplaintCategory'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: DEPARTMENT_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: CATEGORY_NAME_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/complaint-categories/{categoryId}:
+  parameters:
+    - name: categoryId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: adminGetComplaintCategory
+    tags: [Administration]
+    summary: Get Category
+    description: 06-Administration-APIs.md Section 6.2.3.
+    responses:
+      '200':
+        description: Category detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ComplaintCategory'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: adminUpdateComplaintCategory
+    tags: [Administration]
+    summary: Update Category
+    description: 06-Administration-APIs.md Section 6.2.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              defaultPriority:
+                type: string
+                enum: [low, medium, high, critical]
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: Category updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ComplaintCategory'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: CATEGORY_NAME_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  delete:
+    operationId: adminDeleteComplaintCategory
+    tags: [Administration]
+    summary: Delete Category (Deactivate)
+    description: 06-Administration-APIs.md Section 6.2.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/users:
+  get:
+    operationId: adminListUsers
+    tags: [Administration]
+    summary: List Users
+    description: 06-Administration-APIs.md Section 6.3.1.
+    parameters:
+      - name: userType
+        in: query
+        schema:
+          type: string
+          enum: [officer, department_admin, corporation_admin]
+      - name: departmentId
+        in: query
+        schema: { type: string }
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: User list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/StaffUser'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+  post:
+    operationId: adminCreateUser
+    tags: [Administration]
+    summary: Create User
+    description: >-
+      Provision an Officer, Department Admin, or Corporation Admin
+      account. Citizen accounts self-register via OTP verify, never
+      created here. 06-Administration-APIs.md Section 6.3.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [username, name, email, userType, roleIds]
+            properties:
+              username: { type: string }
+              name: { type: string }
+              email: { type: string, format: email }
+              userType:
+                type: string
+                enum: [officer, department_admin, corporation_admin]
+              departmentId: { type: string }
+              hierarchyLevelId: { type: string }
+              roleIds:
+                type: array
+                minItems: 1
+                items: { type: string }
+              initialPassword:
+                type: string
+                format: password
+                description: Omit to trigger a set-password invite email.
+    responses:
+      '201':
+        description: User created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/StaffUser'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        description: FORBIDDEN — privilege escalation attempt (OWASP A01).
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: USERNAME_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/users/{userId}:
+  parameters:
+    - name: userId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: adminGetUser
+    tags: [Administration]
+    summary: Get User
+    description: 06-Administration-APIs.md Section 6.3.3.
+    responses:
+      '200':
+        description: User detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/StaffUser'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: adminUpdateUser
+    tags: [Administration]
+    summary: Update User
+    description: >-
+      username is immutable. 06-Administration-APIs.md Section 6.3.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              email: { type: string, format: email }
+              departmentId: { type: string }
+              hierarchyLevelId: { type: string }
+              roleIds:
+                type: array
+                items: { type: string }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: User updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/StaffUser'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  delete:
+    operationId: adminDeleteUser
+    tags: [Administration]
+    summary: Delete User (Deactivate)
+    description: >-
+      Triggers an allDevices logout and denylists live tokens.
+      06-Administration-APIs.md Section 6.3.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: OFFICER_HAS_ACTIVE_ASSIGNMENTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/roles:
+  get:
+    operationId: adminListRoles
+    tags: [Administration]
+    summary: List Roles
+    description: 06-Administration-APIs.md Section 6.4.1.
+    parameters:
+      - name: isSystemRole
+        in: query
+        schema: { type: boolean }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Role list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/RoleSummary'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+  post:
+    operationId: adminCreateRole
+    tags: [Administration]
+    summary: Create Role
+    description: >-
+      System roles are seeded, not created here.
+      06-Administration-APIs.md Section 6.4.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, permissionIds]
+            properties:
+              name: { type: string }
+              permissionIds:
+                type: array
+                minItems: 1
+                items: { type: string }
+    responses:
+      '201':
+        description: Role created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/RoleSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '409':
+        description: ROLE_NAME_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/roles/{roleId}:
+  parameters:
+    - name: roleId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: adminGetRole
+    tags: [Administration]
+    summary: Get Role
+    description: >-
+      Includes assigned permissions. 06-Administration-APIs.md Section
+      6.4.3.
+    responses:
+      '200':
+        description: Role detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/RoleDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: adminUpdateRole
+    tags: [Administration]
+    summary: Update Role
+    description: >-
+      Rejected (403) for isSystemRole=true rows.
+      06-Administration-APIs.md Section 6.4.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              permissionIds:
+                type: array
+                items: { type: string }
+    responses:
+      '200':
+        description: Role updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/RoleDetail'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: ROLE_NAME_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  delete:
+    operationId: adminDeleteRole
+    tags: [Administration]
+    summary: Delete Role (Deactivate)
+    description: >-
+      Rejected for system roles. 06-Administration-APIs.md Section
+      6.4.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/permissions:
+  get:
+    operationId: adminListPermissions
+    tags: [Administration]
+    summary: List Permissions
+    description: >-
+      Global, system-defined catalog. No create/update/delete.
+      06-Administration-APIs.md Section 6.5.1.
+    parameters:
+      - name: resource
+        in: query
+        schema: { type: string }
+    responses:
+      '200':
+        description: Permission catalog.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Permission'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/permissions/{permissionId}:
+  parameters:
+    - name: permissionId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: adminGetPermission
+    tags: [Administration]
+    summary: Get Permission
+    description: 06-Administration-APIs.md Section 6.5.2.
+    responses:
+      '200':
+        description: Permission detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Permission'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/approval-workflows:
+  get:
+    operationId: adminListApprovalWorkflows
+    tags: [Administration]
+    summary: List Approval Workflow Rules
+    description: 06-Administration-APIs.md Section 6.6.1.
+    parameters:
+      - name: categoryId
+        in: query
+        schema: { type: string }
+      - name: departmentId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Rule list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ApprovalWorkflowRule'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: adminCreateApprovalWorkflow
+    tags: [Administration]
+    summary: Create Approval Workflow Rule
+    description: >-
+      Governs the existing approval_request/approval_action tables
+      unchanged (DATABASE_DESIGN.md §8). 06-Administration-APIs.md
+      Section 6.6.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [categoryId, requiredLevelId, effectiveFrom]
+            properties:
+              categoryId: { type: string }
+              requiredLevelId: { type: string }
+              effectiveFrom: { type: string, format: date-time }
+    responses:
+      '201':
+        description: Rule created (version 1).
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ApprovalWorkflowRule'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: CATEGORY_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/approval-workflows/{workflowConfigId}:
+  parameters:
+    - name: workflowConfigId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: adminGetApprovalWorkflow
+    tags: [Administration]
+    summary: Get Approval Workflow Rule
+    description: 06-Administration-APIs.md Section 6.6.3.
+    responses:
+      '200':
+        description: Rule detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ApprovalWorkflowRule'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: adminVersionApprovalWorkflow
+    tags: [Administration]
+    summary: Update Approval Workflow Rule (New Version)
+    description: >-
+      Creates a new version rather than overwriting.
+      06-Administration-APIs.md Section 6.6.4.
+    parameters:
+      - $ref: '#/components/parameters/IfMatchHeader'
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [requiredLevelId, effectiveFrom]
+            properties:
+              requiredLevelId: { type: string }
+              effectiveFrom: { type: string, format: date-time }
+    responses:
+      '200':
+        description: New version created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ApprovalWorkflowRule'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  delete:
+    operationId: adminDeleteApprovalWorkflow
+    tags: [Administration]
+    summary: Delete Approval Workflow Rule (Deactivate)
+    description: 06-Administration-APIs.md Section 6.6.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/sla-rules:
+  get:
+    operationId: adminListSlaRules
+    tags: [Administration]
+    summary: List SLA Rules
+    description: 06-Administration-APIs.md Section 6.7.1.
+    parameters:
+      - name: departmentId
+        in: query
+        schema: { type: string }
+      - name: categoryId
+        in: query
+        schema: { type: string }
+      - name: priority
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: SLA rule list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/SlaRule'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: adminCreateSlaRule
+    tags: [Administration]
+    summary: Create SLA Rule
+    description: 06-Administration-APIs.md Section 6.7.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [departmentId, categoryId, priority, resolutionHours, effectiveFrom]
+            properties:
+              departmentId: { type: string }
+              categoryId: { type: string }
+              priority: { type: string }
+              resolutionHours: { type: integer, minimum: 1, maximum: 8760 }
+              effectiveFrom: { type: string, format: date-time }
+    responses:
+      '201':
+        description: SLA rule created (version 1).
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SlaRule'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: DEPARTMENT_OR_CATEGORY_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/sla-rules/{slaRuleId}:
+  parameters:
+    - name: slaRuleId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: adminGetSlaRule
+    tags: [Administration]
+    summary: Get SLA Rule
+    description: 06-Administration-APIs.md Section 6.7.3.
+    responses:
+      '200':
+        description: SLA rule detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SlaRule'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: adminVersionSlaRule
+    tags: [Administration]
+    summary: Update SLA Rule (New Version)
+    description: >-
+      A complaint already in flight keeps its originally-pinned SLA
+      version. 06-Administration-APIs.md Section 6.7.4.
+    parameters:
+      - $ref: '#/components/parameters/IfMatchHeader'
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [resolutionHours, effectiveFrom]
+            properties:
+              resolutionHours: { type: integer, minimum: 1, maximum: 8760 }
+              effectiveFrom: { type: string, format: date-time }
+    responses:
+      '200':
+        description: New version created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SlaRule'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  delete:
+    operationId: adminDeleteSlaRule
+    tags: [Administration]
+    summary: Delete SLA Rule (Deactivate)
+    description: 06-Administration-APIs.md Section 6.7.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/escalation-rules:
+  get:
+    operationId: adminListEscalationRules
+    tags: [Administration]
+    summary: List Escalation Rules
+    description: 06-Administration-APIs.md Section 6.8.1.
+    parameters:
+      - name: departmentId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Escalation rule list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/EscalationRule'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: adminCreateEscalationRule
+    tags: [Administration]
+    summary: Create Escalation Rule
+    description: 06-Administration-APIs.md Section 6.8.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [departmentId, fromLevelId, toLevelId, triggerCondition, escalateAfterHours]
+            properties:
+              departmentId: { type: string }
+              fromLevelId: { type: string }
+              toLevelId: { type: string }
+              triggerCondition:
+                type: string
+                enum: [sla_breach, no_action_after_hours]
+              escalateAfterHours: { type: integer, minimum: 1 }
+    responses:
+      '201':
+        description: Escalation rule created (version 1).
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/EscalationRule'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '422':
+        description: INVALID_LEVEL_ORDER.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/escalation-rules/{escalationRuleId}:
+  parameters:
+    - name: escalationRuleId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: adminGetEscalationRule
+    tags: [Administration]
+    summary: Get Escalation Rule
+    description: 06-Administration-APIs.md Section 6.8.3.
+    responses:
+      '200':
+        description: Escalation rule detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/EscalationRule'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: adminVersionEscalationRule
+    tags: [Administration]
+    summary: Update Escalation Rule (New Version)
+    description: 06-Administration-APIs.md Section 6.8.4.
+    parameters:
+      - $ref: '#/components/parameters/IfMatchHeader'
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              toLevelId: { type: string }
+              escalateAfterHours: { type: integer, minimum: 1 }
+    responses:
+      '200':
+        description: New version created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/EscalationRule'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '422':
+        description: INVALID_LEVEL_ORDER.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  delete:
+    operationId: adminDeleteEscalationRule
+    tags: [Administration]
+    summary: Delete Escalation Rule (Deactivate)
+    description: 06-Administration-APIs.md Section 6.8.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/tenant-config:
+  get:
+    operationId: adminGetTenantConfig
+    tags: [Administration]
+    summary: Get Tenant Configuration
+    description: 06-Administration-APIs.md Section 6.9.1.
+    responses:
+      '200':
+        description: Tenant configuration snapshot.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TenantConfig'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+  patch:
+    operationId: adminUpdateTenantConfig
+    tags: [Administration]
+    summary: Update Tenant Configuration
+    description: 06-Administration-APIs.md Section 6.9.2.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              defaultLanguage: { type: string, enum: [ta, en] }
+              sessionTimeouts:
+                type: object
+                properties:
+                  citizen: { type: integer }
+                  officer: { type: integer }
+                  admin: { type: integer }
+              passwordPolicy:
+                type: object
+                properties:
+                  minLength: { type: integer, minimum: 12 }
+                  rotationDays: { type: integer }
+              reopenWindowDays: { type: integer, minimum: 1 }
+    responses:
+      '200':
+        description: Tenant configuration updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/TenantConfig'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/feature-flags:
+  get:
+    operationId: adminListFeatureFlags
+    tags: [Administration]
+    summary: List Feature Flags
+    description: 06-Administration-APIs.md Section 6.10.1.
+    responses:
+      '200':
+        description: Feature flag list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FeatureFlag'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/feature-flags/{flagKey}:
+  parameters:
+    - name: flagKey
+      in: path
+      required: true
+      schema: { type: string }
+  patch:
+    operationId: adminToggleFeatureFlag
+    tags: [Administration]
+    summary: Toggle Feature Flag
+    description: 06-Administration-APIs.md Section 6.10.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [isEnabled]
+            properties:
+              isEnabled: { type: boolean }
+    responses:
+      '200':
+        description: Flag updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/FeatureFlag'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/providers:
+  get:
+    operationId: adminListProviders
+    tags: [Administration]
+    summary: List Providers
+    description: 06-Administration-APIs.md Section 6.11.1.
+    parameters:
+      - name: providerType
+        in: query
+        schema:
+          type: string
+          enum: [ai, voice, sms, whatsapp, email, maps]
+    responses:
+      '200':
+        description: Provider configuration list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ProviderConfig'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/providers/{providerType}:
+  parameters:
+    - name: providerType
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [ai, voice, sms, whatsapp, email, maps]
+  put:
+    operationId: adminSetActiveProvider
+    tags: [Administration]
+    summary: Set Active Provider
+    description: >-
+      Super Admin only. 06-Administration-APIs.md Section 6.11.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [providerName, secretReference]
+            properties:
+              providerName: { type: string }
+              secretReference:
+                type: string
+                description: Secrets-manager reference, never a raw credential.
+    responses:
+      '200':
+        description: Active provider set.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ProviderConfig'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '422':
+        description: UNSUPPORTED_PROVIDER.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+components:
+  parameters:
+    IfMatchHeader:
+      name: If-Match
+      in: header
+      required: true
+      description: >-
+        Optimistic-concurrency precondition carrying the caller's
+        last-known version, required on the versioned-config update
+        endpoints (06-Administration-APIs.md Sections 6.6.4, 6.7.4,
+        6.8.4).
+      schema:
+        type: string
+  schemas:
+    Department:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ComplaintCategory:
+      type: object
+      properties:
+        id: { type: string }
+        departmentId: { type: string }
+        name: { type: string }
+        defaultPriority: { type: string, enum: [low, medium, high, critical] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    StaffUser:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        userType:
+          type: string
+          enum: [officer, department_admin, corporation_admin]
+        departmentId: { type: string }
+        hierarchyLevelId: { type: string }
+        employeeId: { type: string }
+        roles:
+          type: array
+          items: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    RoleSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        isSystemRole: { type: boolean }
+        permissionCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+    RoleDetail:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        isSystemRole: { type: boolean }
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        createdAt: { type: string, format: date-time }
+    Permission:
+      type: object
+      properties:
+        id: { type: string }
+        resource: { type: string }
+        action: { type: string }
+        description: { type: string }
+    ApprovalWorkflowRule:
+      type: object
+      properties:
+        id: { type: string }
+        categoryId: { type: string }
+        requiredLevelId: { type: string }
+        version: { type: integer }
+        effectiveFrom: { type: string, format: date-time }
+        effectiveTo: { type: [string, "null"], format: date-time }
+    SlaRule:
+      type: object
+      properties:
+        id: { type: string }
+        departmentId: { type: string }
+        categoryId: { type: string }
+        priority: { type: string }
+        resolutionHours: { type: integer }
+        version: { type: integer }
+        effectiveFrom: { type: string, format: date-time }
+        effectiveTo: { type: [string, "null"], format: date-time }
+    EscalationRule:
+      type: object
+      properties:
+        id: { type: string }
+        departmentId: { type: string }
+        fromLevelId: { type: string }
+        toLevelId: { type: string }
+        triggerCondition:
+          type: string
+          enum: [sla_breach, no_action_after_hours]
+        escalateAfterHours: { type: integer }
+        version: { type: integer }
+    TenantConfig:
+      type: object
+      properties:
+        tenantCode: { type: string }
+        tenantName: { type: string }
+        defaultLanguage: { type: string, enum: [ta, en] }
+        sessionTimeouts:
+          type: object
+          properties:
+            citizen: { type: integer }
+            officer: { type: integer }
+            admin: { type: integer }
+        passwordPolicy:
+          type: object
+          properties:
+            minLength: { type: integer }
+            rotationDays: { type: integer }
+        reopenWindowDays: { type: integer }
+    FeatureFlag:
+      type: object
+      properties:
+        flagKey: { type: string }
+        isEnabled: { type: boolean }
+        flagType: { type: string }
+        updatedAt: { type: string, format: date-time }
+    ProviderConfig:
+      type: object
+      properties:
+        providerType:
+          type: string
+          enum: [ai, voice, sms, whatsapp, email, maps]
+        providerName: { type: string }
+        isActive: { type: boolean }
+        updatedAt: { type: string, format: date-time }

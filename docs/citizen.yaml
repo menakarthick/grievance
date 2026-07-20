@@ -1,0 +1,381 @@
+/api/v1/citizens/me:
+  get:
+    operationId: citizenGetProfile
+    tags:
+      - Citizen
+    summary: Get Citizen Profile
+    description: >-
+      Retrieve the authenticated citizen's own profile.
+      API_SPECIFICATION.md Section 3.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/include'
+    responses:
+      '200':
+        description: Citizen profile.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CitizenProfile'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        description: PROFILE_NOT_FOUND.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+  patch:
+    operationId: citizenUpdateProfile
+    tags:
+      - Citizen
+    summary: Update Citizen Profile
+    description: >-
+      Partially update the citizen's own name/email fields. mobileNumber
+      is never patchable here — it is the authentication factor and
+      requires re-verification via OTP (Section 2.1/2.2).
+      API_SPECIFICATION.md Section 3.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                minLength: 2
+                maxLength: 100
+              email:
+                type: string
+                format: email
+    responses:
+      '200':
+        description: Updated profile.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CitizenProfile'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/citizens/me/address:
+  put:
+    operationId: citizenUpdateAddress
+    tags:
+      - Citizen
+    summary: Update Address
+    description: >-
+      Replace the citizen's registered address in full.
+      API_SPECIFICATION.md Section 3.3.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: './components/schemas.yaml#/Address'
+    responses:
+      '200':
+        description: Address replaced.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      allOf:
+                        - $ref: './components/schemas.yaml#/Address'
+                        - type: object
+                          properties:
+                            updatedAt:
+                              type: string
+                              format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '422':
+        description: WARD_NOT_FOUND.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/citizens/me/language-preference:
+  put:
+    operationId: citizenUpdateLanguagePreference
+    tags:
+      - Citizen
+    summary: Update Language Preference
+    description: >-
+      Set the citizen's preferred content/notification language (Tamil/
+      English, SRS §4.4). API_SPECIFICATION.md Section 3.4.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - languageCode
+            properties:
+              languageCode:
+                type: string
+                enum:
+                  - ta
+                  - en
+    responses:
+      '200':
+        description: Preference updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        languageCode:
+                          type: string
+                          enum:
+                            - ta
+                            - en
+                        updatedAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '422':
+        description: LANGUAGE_NOT_SUPPORTED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+/api/v1/citizens/me/notification-preference:
+  put:
+    operationId: citizenUpdateNotificationPreference
+    tags:
+      - Citizen
+    summary: Update Notification Preference
+    description: >-
+      Set which channels (SMS/Email/WhatsApp/Push) the citizen wants
+      notified on. API_SPECIFICATION.md Section 3.5.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - channels
+            properties:
+              channels:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - channel
+                    - isEnabled
+                  properties:
+                    channel:
+                      type: string
+                      enum:
+                        - sms
+                        - email
+                        - whatsapp
+                        - push
+                    isEnabled:
+                      type: boolean
+    responses:
+      '200':
+        description: Preferences updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        channels:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              channel:
+                                type: string
+                              isEnabled:
+                                type: boolean
+                        updatedAt:
+                          type: string
+                          format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '422':
+        description: ALL_CHANNELS_DISABLED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+/api/v1/citizens/me/complaints:
+  get:
+    operationId: citizenListComplaintHistory
+    tags:
+      - Citizen
+    summary: Citizen Complaint History
+    description: >-
+      List the authenticated citizen's own past and active complaints.
+      API_SPECIFICATION.md Section 3.6.
+    parameters:
+      - name: statusId
+        in: query
+        schema:
+          type: string
+      - name: departmentId
+        in: query
+        schema:
+          type: string
+      - $ref: './components/parameters.yaml#/sort'
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        description: Max 100, default 20.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+    responses:
+      '200':
+        description: Paginated complaint list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          trackingId:
+                            type: string
+                          statusLabel:
+                            type: string
+                          categoryName:
+                            type: string
+                          createdAt:
+                            type: string
+                            format: date-time
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+
+/api/v1/citizens/me/dashboard:
+  get:
+    operationId: citizenGetDashboard
+    tags:
+      - Citizen
+    summary: Citizen Dashboard
+    description: >-
+      Aggregated view for the Citizen Portal home screen.
+      API_SPECIFICATION.md Section 3.7.
+    responses:
+      '200':
+        description: Dashboard summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        openComplaintCount:
+                          type: integer
+                        resolvedComplaintCount:
+                          type: integer
+                        recentComplaints:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              trackingId:
+                                type: string
+                              statusLabel:
+                                type: string
+                              updatedAt:
+                                type: string
+                                format: date-time
+                        unreadNotificationCount:
+                          type: integer
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+components:
+  schemas:
+    CitizenProfile:
+      type: object
+      description: >-
+        Citizen profile shape shared by Get/Update Citizen Profile
+        (API_SPECIFICATION.md Sections 3.1-3.2).
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mobileNumber:
+          type: string
+        email:
+          type: string
+          format: email
+        preferredLanguage:
+          type: string
+          enum:
+            - ta
+            - en
+        wardId:
+          type: string
+        address:
+          $ref: './components/schemas.yaml#/Address'
+        createdAt:
+          type: string
+          format: date-time

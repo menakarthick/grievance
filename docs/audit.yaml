@@ -1,0 +1,1398 @@
+/api/v1/audit-logs:
+  get:
+    operationId: auditListLogs
+    tags: [Audit]
+    summary: List Audit Logs
+    description: >-
+      Search the immutable, generic audit trail of every state-changing
+      action platform-wide. Results are always excluded of any raw
+      citizen PII. 10-Audit-APIs.md Section 10.2.1.
+    parameters:
+      - name: entityType
+        in: query
+        schema: { type: string }
+      - name: entityId
+        in: query
+        schema: { type: string }
+      - name: actorUserId
+        in: query
+        schema: { type: string }
+      - name: action
+        in: query
+        schema: { type: string }
+      - name: filter[createdAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[createdAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: sort
+        in: query
+        schema: { type: string, default: '-createdAt' }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Audit log list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/AuditLogListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit-logs/{auditLogId}:
+  parameters:
+    - name: auditLogId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetLog
+    tags: [Audit]
+    summary: Get Audit Log Detail
+    description: >-
+      Retrieve full detail for a single audit log entry.
+      10-Audit-APIs.md Section 10.2.2.
+    responses:
+      '200':
+        description: Audit log detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/AuditLogDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/activity-logs:
+  get:
+    operationId: auditListActivityLogs
+    tags: [Audit]
+    summary: List User Activity
+    description: >-
+      Search activity/security monitoring events - login attempts,
+      session activity, bulk-read flags. IP/device/browser fields are
+      PII-adjacent - restricted to Corporation Admin/Super Admin.
+      10-Audit-APIs.md Section 10.3.1.
+    parameters:
+      - name: actorUserId
+        in: query
+        schema: { type: string }
+      - name: activityType
+        in: query
+        schema: { type: string }
+      - name: ipAddress
+        in: query
+        schema: { type: string }
+      - name: filter[createdAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[createdAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Activity log list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ActivityLogListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/activity-logs/{activityLogId}:
+  parameters:
+    - name: activityLogId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetActivityLog
+    tags: [Audit]
+    summary: Get User Activity Detail
+    description: >-
+      Retrieve full detail for a single activity event.
+      10-Audit-APIs.md Section 10.3.2.
+    responses:
+      '200':
+        description: Activity log detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ActivityLogDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/activity-logs/users/{userId}/timeline:
+  parameters:
+    - name: userId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetUserActivityTimeline
+    tags: [Audit]
+    summary: Get User Activity Timeline
+    description: >-
+      Retrieve a single user's full activity history in one aggregated,
+      chronological view, for an investigation. Merges activity_log and
+      auth_event_log rows for this user into one chronological stream.
+      Access is itself an investigation-grade action and is logged.
+      10-Audit-APIs.md Section 10.3.3.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: User activity timeline.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ActivityTimelineItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/login-history:
+  get:
+    operationId: auditListLoginHistory
+    tags: [Audit]
+    summary: List Login History
+    description: >-
+      View login/logout/MFA/failed-attempt/password-reset event history
+      for a user. Non-Admin callers are always scoped to their own
+      userId regardless of any userId supplied. 10-Audit-APIs.md
+      Section 10.4.1.
+    parameters:
+      - name: userId
+        in: query
+        description: Admin only.
+        schema: { type: string }
+      - name: eventType
+        in: query
+        schema:
+          type: string
+          enum: [login, logout, mfa_challenge, failed_attempt, password_reset]
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Login history list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/LoginHistoryListItem'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/login-history/{authEventId}:
+  parameters:
+    - name: authEventId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetLoginHistoryDetail
+    tags: [Audit]
+    summary: Get Login Audit Detail
+    description: >-
+      Retrieve full detail for a single login/auth event.
+      10-Audit-APIs.md Section 10.4.2.
+    responses:
+      '200':
+        description: Login audit detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/LoginHistoryDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/login-history/failed-attempts:
+  get:
+    operationId: auditGetFailedLoginAttempts
+    tags: [Audit]
+    summary: Get Failed Login Attempts Report
+    description: >-
+      Aggregate view of failed login attempts and lockouts across the
+      tenant, for security monitoring. Cross-references
+      account_lockout_state for current lock status alongside the
+      historical auth_event_log count. 10-Audit-APIs.md Section 10.4.3.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: minAttempts
+        in: query
+        schema: { type: integer, default: 3 }
+    responses:
+      '200':
+        description: Failed login attempts report.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FailedLoginAttemptRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/configuration-changes:
+  get:
+    operationId: auditListConfigurationChanges
+    tags: [Audit]
+    summary: List Configuration Changes
+    description: >-
+      View the version history of any tenant configuration table (SLA
+      rules, escalation matrix, approval workflow, notification
+      templates, tenant settings, feature flags, providers).
+      10-Audit-APIs.md Section 10.5.1.
+    parameters:
+      - name: configTableName
+        in: query
+        schema: { type: string }
+      - name: configRowId
+        in: query
+        schema: { type: string }
+      - name: changedBy
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Configuration change list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ConfigChangeListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/configuration-changes/{configChangeId}:
+  parameters:
+    - name: configChangeId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetConfigurationChange
+    tags: [Audit]
+    summary: Get Configuration Change Detail
+    description: >-
+      Retrieve the full before/after diff for a single configuration
+      change - the list endpoint intentionally omits the full row
+      bodies to keep list payloads light. 10-Audit-APIs.md Section
+      10.5.2.
+    responses:
+      '200':
+        description: Configuration change detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ConfigChangeDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/workflow-history:
+  get:
+    operationId: auditListWorkflowHistory
+    tags: [Audit]
+    summary: List Workflow History
+    description: >-
+      Search the full workflow audit trail across complaints - every
+      status change, (re)assignment, escalation, and approval action.
+      Merges four source tables into one chronological event stream per
+      complaint. 10-Audit-APIs.md Section 10.6.1.
+    parameters:
+      - name: complaintId
+        in: query
+        schema: { type: string }
+      - name: eventType
+        in: query
+        schema:
+          type: string
+          enum: [status_change, assignment, escalation, approval]
+      - name: actorUserId
+        in: query
+        schema: { type: string }
+      - name: filter[createdAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[createdAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Workflow history list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: './components/schemas.yaml#/WorkflowStep'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/workflow-history/complaints/{complaintId}:
+  parameters:
+    - name: complaintId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetComplaintWorkflowHistory
+    tags: [Audit]
+    summary: Get Workflow Audit Detail for a Complaint
+    description: >-
+      Retrieve the complete, unredacted workflow trail for one specific
+      complaint - the Admin/investigation-grade counterpart to the
+      citizen-facing Complaint Timeline (API_SPECIFICATION.md Section
+      4.6). Includes internal-only detail intentionally omitted from
+      that citizen-facing view. 10-Audit-APIs.md Section 10.6.2.
+    responses:
+      '200':
+        description: Complaint workflow audit detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        complaintId: { type: string }
+                        events:
+                          type: array
+                          items:
+                            $ref: './components/schemas.yaml#/WorkflowStep'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/ai-decisions:
+  get:
+    operationId: auditListAiDecisions
+    tags: [Audit]
+    summary: List AI Decision Trace
+    description: >-
+      Search AI classification/invocation/masking evidence records, for
+      AI-governance review. Never returns unmasked PII, prompt content,
+      or raw model output. Access is itself compliance-relevant and
+      logged. 10-Audit-APIs.md Section 10.7.1.
+    parameters:
+      - name: complaintId
+        in: query
+        schema: { type: string }
+      - name: agentType
+        in: query
+        schema:
+          type: string
+          enum: [complaint, officer_ai, analytics, voice]
+      - name: filter[createdAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[createdAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: AI decision trace list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/AiDecisionListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/ai-decisions/{aiDecisionId}:
+  parameters:
+    - name: aiDecisionId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetAiDecision
+    tags: [Audit]
+    summary: Get AI Decision Detail
+    description: >-
+      Retrieve full detail for a single AI decision/invocation event.
+      Same PII-exclusion rule as List AI Decision Trace.
+      10-Audit-APIs.md Section 10.7.2.
+    responses:
+      '200':
+        description: AI decision detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/AiDecisionDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/notifications:
+  get:
+    operationId: auditListNotifications
+    tags: [Audit]
+    summary: List Notification Audit Trail
+    description: >-
+      Search notification dispatch decisions platform-wide, including
+      which were Emergency Overrides. actorUserId/justification
+      populated only for Admin-initiated dispatches; system/event-driven
+      dispatches show actorUserId = null. 10-Audit-APIs.md Section
+      10.8.1.
+    parameters:
+      - name: channel
+        in: query
+        schema: { type: string }
+      - name: overrideOnly
+        in: query
+        schema: { type: boolean }
+      - name: actorUserId
+        in: query
+        schema: { type: string }
+      - name: filter[createdAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[createdAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Notification audit trail list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/NotificationAuditListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/notifications/{notificationDispatchId}:
+  parameters:
+    - name: notificationDispatchId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetNotificationDetail
+    tags: [Audit]
+    summary: Get Notification Audit Detail
+    description: >-
+      Retrieve full audit detail for a single notification dispatch
+      decision. recipientPreferenceAtSendTime shows the recipient's
+      stored channel preference at the moment of dispatch, so an
+      auditor can independently confirm whether an override was
+      actually necessary. 10-Audit-APIs.md Section 10.8.2.
+    responses:
+      '200':
+        description: Notification audit detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/NotificationAuditDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/files:
+  get:
+    operationId: auditListFileAccess
+    tags: [Audit]
+    summary: List File Access Audit
+    description: >-
+      Search file upload/download/delete/access events tenant-wide.
+      10-Audit-APIs.md Section 10.9.1.
+    parameters:
+      - name: fileAssetId
+        in: query
+        schema: { type: string }
+      - name: actorUserId
+        in: query
+        schema: { type: string }
+      - name: action
+        in: query
+        schema: { type: string, enum: [upload, download, delete, preview] }
+      - name: filter[createdAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[createdAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: File access audit list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FileAuditListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/files/{fileAuditId}:
+  parameters:
+    - name: fileAuditId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetFileAccessDetail
+    tags: [Audit]
+    summary: Get File Audit Detail
+    description: >-
+      Retrieve full audit detail for a single file access event.
+      10-Audit-APIs.md Section 10.9.2.
+    responses:
+      '200':
+        description: File audit detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/FileAuditDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/security-events:
+  get:
+    operationId: auditListSecurityEvents
+    tags: [Audit]
+    summary: List Security Events
+    description: >-
+      Search security-relevant events - lockouts, MFA enrollment/reset,
+      permission grants/revocations, provider credential changes. This
+      endpoint is itself a high-value target for an attacker probing
+      security posture - restricted to the two highest Admin tiers.
+      10-Audit-APIs.md Section 10.10.1.
+    parameters:
+      - name: eventType
+        in: query
+        schema:
+          type: string
+          enum: [lockout, mfa_reset, permission_change, provider_credential_change]
+      - name: actorUserId
+        in: query
+        schema: { type: string }
+      - name: filter[createdAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[createdAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Security event list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/SecurityEventListItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/security-events/{securityEventId}:
+  parameters:
+    - name: securityEventId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetSecurityEvent
+    tags: [Audit]
+    summary: Get Security Event Detail
+    description: >-
+      Retrieve full detail for a single security event.
+      10-Audit-APIs.md Section 10.10.2.
+    responses:
+      '200':
+        description: Security event detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SecurityEventDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/search:
+  get:
+    operationId: auditGlobalSearch
+    tags: [Audit]
+    summary: Global Audit Search
+    description: >-
+      Free-text/cross-entity search across every specialized audit
+      trail in one call, for an investigator who does not yet know
+      which specific trail holds the answer. Backed by MySQL FULLTEXT
+      in Phase-1, transparently upgraded to OpenSearch/Elasticsearch in
+      later phases, with no client-facing contract change. A search
+      query is itself logged. 10-Audit-APIs.md Section 10.11.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/search'
+      - name: trails
+        in: query
+        description: >-
+          Comma-separated subset of audit_log, activity_log,
+          auth_event_log, config_change_history, workflow, ai_decision,
+          notification, file, security.
+        schema: { type: string }
+      - name: filter[createdAt][gte]
+        in: query
+        schema: { type: string, format: date-time }
+      - name: filter[createdAt][lte]
+        in: query
+        schema: { type: string, format: date-time }
+      - $ref: './components/parameters.yaml#/cursor'
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      '200':
+        description: Cross-trail search results.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/AuditSearchResultItem'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/export:
+  get:
+    operationId: auditExport
+    tags: [Audit]
+    summary: Export Audit Logs
+    description: >-
+      Export any of the audit trails as CSV/PDF for offline/compliance
+      use. Large exports are generated asynchronously via the
+      Scheduler; the resulting artifact is a file_asset. Exporting
+      audit evidence is itself a mandatory-audited compliance-relevant
+      action. 10-Audit-APIs.md Section 10.12.1.
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      - name: trail
+        in: query
+        required: true
+        description: >-
+          One of audit_log, activity_log, login_history,
+          configuration_changes, workflow, ai_decision, notification,
+          file, security_events.
+        schema: { type: string }
+      - name: format
+        in: query
+        required: true
+        schema: { type: string, enum: [csv, pdf] }
+    responses:
+      '202':
+        description: Export job queued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: './components/schemas.yaml#/AsyncJob'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+
+/api/v1/audit/export/{exportJobId}:
+  parameters:
+    - name: exportJobId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: auditGetExportStatus
+    tags: [Audit]
+    summary: Get Audit Export Job Status
+    description: >-
+      Poll the status of an asynchronous audit export job.
+      10-Audit-APIs.md Section 10.12.2.
+    responses:
+      '200':
+        description: Audit export job status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: './components/schemas.yaml#/ReportExport'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/audit/compliance-reports/{reportType}:
+  parameters:
+    - name: reportType
+      in: path
+      required: true
+      description: e.g. dpdp-readiness, audit-completeness, owasp-mapping.
+      schema: { type: string }
+  get:
+    operationId: auditGetComplianceReport
+    tags: [Audit]
+    summary: Get Compliance Report
+    description: >-
+      Generate a compliance evidence report for a specific framework.
+      This report is a structured evidence summary over already-
+      approved controls - it does not itself claim certification.
+      10-Audit-APIs.md Section 10.13.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/periodStart'
+      - $ref: './components/parameters.yaml#/periodEnd'
+    responses:
+      '200':
+        description: Compliance report.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ComplianceReport'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: REPORT_TYPE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/audit/compliance-reports:
+  get:
+    operationId: auditListComplianceReportTypes
+    tags: [Audit]
+    summary: List Compliance Report Types
+    description: >-
+      Retrieve the catalog of available compliance report types.
+      10-Audit-APIs.md Section 10.13.2.
+    responses:
+      '200':
+        description: Compliance report type catalog.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ComplianceReportType'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/retention-policy:
+  get:
+    operationId: auditGetRetentionPolicy
+    tags: [Audit]
+    summary: Get Retention Policy
+    description: >-
+      Retrieve the tenant's currently effective retention periods per
+      data category. Values reflect the fixed periods in
+      DATABASE_DESIGN.md Section 23 - not tenant-editable below the SRS
+      Section 4.3 floor. 10-Audit-APIs.md Section 10.14.1.
+    responses:
+      '200':
+        description: Retention policy.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/RetentionPolicyRow'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/retention-status:
+  get:
+    operationId: auditGetRetentionStatus
+    tags: [Audit]
+    summary: Get Retention Status Report
+    description: >-
+      Report which records are approaching their retention-expiry purge
+      date, for advance visibility before the automated Cleanup Job
+      runs. Purely informational - never triggers a purge itself.
+      10-Audit-APIs.md Section 10.14.2.
+    parameters:
+      - name: dataCategory
+        in: query
+        schema: { type: string }
+      - name: withinDays
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 3650, default: 90 }
+    responses:
+      '200':
+        description: Retention status report.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/RetentionStatusRow'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+/api/v1/audit/dashboard:
+  get:
+    operationId: auditGetDashboardSummary
+    tags: [Audit]
+    summary: Get Audit Dashboard Summary
+    description: >-
+      Composite summary of audit/security posture - recent failed
+      logins, lockouts, config changes, AI overrides, and pending
+      compliance attention items - for an Admin Portal Audit Dashboard
+      landing view. Aggregates across every trail into one landing-page
+      summary. 10-Audit-APIs.md Section 10.15.1.
+    parameters:
+      - $ref: './components/parameters.yaml#/periodStart'
+      - $ref: './components/parameters.yaml#/periodEnd'
+    responses:
+      '200':
+        description: Audit dashboard summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/AuditDashboardSummary'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+
+components:
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: >-
+        Optional on the Export Audit Logs request to prevent duplicate
+        export jobs on client retry (10-Audit-APIs.md Section 10.12.1).
+      schema:
+        type: string
+  schemas:
+    AuditLogListItem:
+      type: object
+      properties:
+        id: { type: string }
+        actorUserId: { type: [string, "null"] }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        changeSummary: { type: object }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+    AuditLogDetail:
+      type: object
+      properties:
+        id: { type: string }
+        actorUserId: { type: [string, "null"] }
+        actorName: { type: string }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        changeSummary: { type: object }
+        correlationId: { type: string }
+        requestId: { type: string }
+        createdAt: { type: string, format: date-time }
+    ActivityLogListItem:
+      type: object
+      properties:
+        id: { type: string }
+        actorUserId: { type: string }
+        activityType: { type: string }
+        ipAddress: { type: string }
+        deviceFingerprint: { type: string }
+        userAgent: { type: string }
+        createdAt: { type: string, format: date-time }
+    ActivityLogDetail:
+      type: object
+      properties:
+        id: { type: string }
+        actorUserId: { type: string }
+        activityType: { type: string }
+        ipAddress: { type: string }
+        deviceFingerprint: { type: string }
+        userAgent: { type: string }
+        sessionId: { type: string }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+    ActivityTimelineItem:
+      type: object
+      properties:
+        activityType: { type: string }
+        ipAddress: { type: string }
+        createdAt: { type: string, format: date-time }
+    LoginHistoryListItem:
+      type: object
+      properties:
+        id: { type: string }
+        eventType: { type: string }
+        ipAddress: { type: string }
+        success: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    LoginHistoryDetail:
+      type: object
+      properties:
+        id: { type: string }
+        eventType: { type: string }
+        ipAddress: { type: string }
+        deviceFingerprint: { type: string }
+        userAgent: { type: string }
+        success: { type: boolean }
+        failureReason: { type: string }
+        sessionId: { type: string }
+        createdAt: { type: string, format: date-time }
+    FailedLoginAttemptRow:
+      type: object
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        failedAttemptCount: { type: integer }
+        currentlyLocked: { type: boolean }
+        lastAttemptAt: { type: string, format: date-time }
+    ConfigChangeListItem:
+      type: object
+      properties:
+        configTableName: { type: string }
+        configRowId: { type: string }
+        previousVersion: { type: integer }
+        newVersion: { type: integer }
+        changedBy:
+          $ref: './components/schemas.yaml#/UserReference'
+        createdAt: { type: string, format: date-time }
+    ConfigChangeDetail:
+      type: object
+      properties:
+        configTableName: { type: string }
+        configRowId: { type: string }
+        previousVersion: { type: object }
+        newVersion: { type: object }
+        changedBy:
+          $ref: './components/schemas.yaml#/UserReference'
+        createdAt: { type: string, format: date-time }
+    AiDecisionListItem:
+      type: object
+      properties:
+        id: { type: string }
+        complaintId: { type: string }
+        agentType: { type: string, enum: [complaint, officer_ai, analytics, voice] }
+        providerName: { type: string }
+        confidenceScore: { type: number, minimum: 0, maximum: 1 }
+        piiTypesDetected:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+    AiDecisionDetail:
+      type: object
+      properties:
+        id: { type: string }
+        complaintId: { type: string }
+        agentType: { type: string, enum: [complaint, officer_ai, analytics, voice] }
+        providerName: { type: string }
+        promptTokenCount: { type: integer }
+        responseTokenCount: { type: integer }
+        latencyMs: { type: integer }
+        status: { type: string }
+        piiTypesDetected:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+    NotificationAuditListItem:
+      type: object
+      properties:
+        notificationDispatchId: { type: string }
+        channel: { type: string }
+        actorUserId: { type: [string, "null"] }
+        wasEmergencyOverride: { type: boolean }
+        justification: { type: string }
+        createdAt: { type: string, format: date-time }
+    NotificationAuditDetail:
+      type: object
+      properties:
+        notificationDispatchId: { type: string }
+        channel: { type: string }
+        actorUserId: { type: [string, "null"] }
+        actorName: { type: string }
+        wasEmergencyOverride: { type: boolean }
+        justification: { type: string }
+        recipientPreferenceAtSendTime: { type: string }
+        createdAt: { type: string, format: date-time }
+    FileAuditListItem:
+      type: object
+      properties:
+        fileAssetId: { type: string }
+        action: { type: string, enum: [upload, download, delete, preview] }
+        actorUserId: { type: string }
+        ipAddress: { type: string }
+        createdAt: { type: string, format: date-time }
+    FileAuditDetail:
+      type: object
+      properties:
+        fileAssetId: { type: string }
+        action: { type: string, enum: [upload, download, delete, preview] }
+        actorUserId: { type: string }
+        actorName: { type: string }
+        ipAddress: { type: string }
+        createdAt: { type: string, format: date-time }
+    SecurityEventListItem:
+      type: object
+      properties:
+        eventType: { type: string }
+        actorUserId: { type: [string, "null"] }
+        targetUserId: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+    SecurityEventDetail:
+      type: object
+      properties:
+        eventType: { type: string }
+        actorUserId: { type: [string, "null"] }
+        actorName: { type: [string, "null"] }
+        targetUserId: { type: [string, "null"] }
+        targetName: { type: [string, "null"] }
+        ipAddress: { type: string }
+        createdAt: { type: string, format: date-time }
+    AuditSearchResultItem:
+      type: object
+      properties:
+        trail: { type: string }
+        id: { type: string }
+        summary: { type: string }
+        actorUserId: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        createdAt: { type: string, format: date-time }
+    ComplianceReport:
+      type: object
+      properties:
+        reportType: { type: string }
+        generatedAt: { type: string, format: date-time }
+        sections:
+          type: array
+          items:
+            type: object
+            properties:
+              title: { type: string }
+              status: { type: string, enum: [compliant, attention_required] }
+              detail: { type: string }
+    ComplianceReportType:
+      type: object
+      properties:
+        reportType: { type: string }
+        title: { type: string }
+        framework: { type: string, enum: [CERT-In, GIGW, OWASP, DPDP, STQC] }
+    RetentionPolicyRow:
+      type: object
+      properties:
+        dataCategory:
+          type: string
+          enum: [complaint_records, audit_logs, voice_recordings, uploaded_documents]
+        retentionYears: { type: integer }
+    RetentionStatusRow:
+      type: object
+      properties:
+        dataCategory: { type: string }
+        recordCount: { type: integer }
+        earliestPurgeDate: { type: string, format: date }
+    AuditDashboardSummary:
+      type: object
+      properties:
+        failedLoginCount: { type: integer }
+        activeLockoutCount: { type: integer }
+        configChangeCount: { type: integer }
+        emergencyOverrideCount: { type: integer }
+        complianceAttentionItems:
+          type: array
+          items:
+            type: object
+            properties:
+              reportType: { type: string }
+              title: { type: string }
+        generatedAt: { type: string, format: date-time }

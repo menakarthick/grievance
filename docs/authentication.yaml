@@ -1,0 +1,678 @@
+/api/v1/auth/citizen/otp/request:
+  post:
+    operationId: authCitizenOtpRequest
+    tags:
+      - Authentication
+    summary: Citizen OTP Request
+    description: >-
+      Send a one-time password to a citizen's registered mobile number to
+      begin registration or login (SRS §3.1, §2.5 — Mobile OTP is the only
+      citizen authentication method). API_SPECIFICATION.md Section 2.1.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - mobileNumber
+            properties:
+              mobileNumber:
+                type: string
+                description: E.164 or 10-digit Indian mobile number.
+                pattern: '^([6-9]\d{9}|\+[1-9]\d{6,14})$'
+    responses:
+      '200':
+        description: OTP dispatched.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        requestId:
+                          type: string
+                          format: uuid
+                        otpExpirySeconds:
+                          type: integer
+                          example: 300
+                        resendAllowedAfterSeconds:
+                          type: integer
+                          example: 30
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+      '503':
+        $ref: './components/responses.yaml#/ServiceUnavailable'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/citizen/otp/verify:
+  post:
+    operationId: authCitizenOtpVerify
+    tags:
+      - Authentication
+    summary: Citizen OTP Verify
+    description: >-
+      Verify the OTP and issue session tokens; creates the user/
+      citizen_profile row on first-ever verification (registration), or
+      logs in an existing citizen. API_SPECIFICATION.md Section 2.2.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - requestId
+              - mobileNumber
+              - otp
+            properties:
+              requestId:
+                type: string
+                format: uuid
+              mobileNumber:
+                type: string
+              otp:
+                type: string
+                pattern: '^\d{6}$'
+              name:
+                type: string
+                description: Required only on first registration.
+    responses:
+      '200':
+        description: Login/registration successful; tokens issued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/CitizenAuthResult'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        description: OTP_INVALID_OR_EXPIRED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/officer/login:
+  post:
+    operationId: authOfficerLogin
+    tags:
+      - Authentication
+    summary: Officer Login (Password — Step 1)
+    description: >-
+      Authenticate an Officer or Department Admin's username/password and
+      trigger the mandatory OTP second factor (SRS §8.1).
+      API_SPECIFICATION.md Section 2.3.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UsernamePasswordInput'
+    responses:
+      '200':
+        description: Credentials accepted; OTP challenge issued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        otpChallengeId:
+                          type: string
+                          format: uuid
+                        otpDeliveredTo:
+                          type: string
+                          description: Masked mobile number.
+                        otpExpirySeconds:
+                          type: integer
+                          example: 300
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        description: INVALID_CREDENTIALS.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '423':
+        description: ACCOUNT_LOCKED (SRS §8.1 — 5 failed attempts, 15-minute lock).
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/officer/otp/verify:
+  post:
+    operationId: authOfficerOtpVerify
+    tags:
+      - Authentication
+    summary: Officer OTP Verify (Login — Step 2)
+    description: >-
+      Complete Officer/Department Admin login by verifying the OTP from
+      the login step, issuing session tokens. API_SPECIFICATION.md
+      Section 2.4.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - otpChallengeId
+              - otp
+            properties:
+              otpChallengeId:
+                type: string
+                format: uuid
+              otp:
+                type: string
+                pattern: '^\d{6}$'
+    responses:
+      '200':
+        description: Login successful; tokens issued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/StaffAuthResult'
+      '401':
+        description: OTP_INVALID_OR_EXPIRED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/admin/login:
+  post:
+    operationId: authAdminLogin
+    tags:
+      - Authentication
+    summary: Admin Login (Password — Step 1)
+    description: >-
+      Authenticate Corporation Admin / Super Admin credentials and
+      trigger mandatory TOTP MFA (SRS §8.1 — MFA enforcement locked "on"
+      for these two roles). API_SPECIFICATION.md Section 2.5.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UsernamePasswordInput'
+    responses:
+      '200':
+        description: Credentials accepted; MFA challenge issued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        mfaChallengeId:
+                          type: string
+                          format: uuid
+                        mfaMethod:
+                          type: string
+                          const: totp
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        description: INVALID_CREDENTIALS.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '409':
+        description: MFA_NOT_ENROLLED — forces a one-time MFA enrollment flow instead.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '423':
+        description: ACCOUNT_LOCKED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/mfa/verify:
+  post:
+    operationId: authMfaVerify
+    tags:
+      - Authentication
+    summary: MFA Verify (TOTP — Admin Login Step 2)
+    description: >-
+      Verify the TOTP code from the Admin's authenticator app, completing
+      Corporation Admin / Super Admin login. API_SPECIFICATION.md Section
+      2.6.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - mfaChallengeId
+              - totpCode
+            properties:
+              mfaChallengeId:
+                type: string
+                format: uuid
+              totpCode:
+                type: string
+                pattern: '^\d{6}$'
+    responses:
+      '200':
+        description: Login successful; tokens issued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/StaffAuthResult'
+      '401':
+        description: MFA_INVALID_OR_EXPIRED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/token/refresh:
+  post:
+    operationId: authTokenRefresh
+    tags:
+      - Authentication
+    summary: Refresh Token
+    description: >-
+      Exchange a valid, unexpired refresh token for a new access token,
+      rotating the refresh token itself (SRS §8.1 — single-use, rotated
+      on each use). API_SPECIFICATION.md Section 2.7.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - refreshToken
+            properties:
+              refreshToken:
+                type: string
+    responses:
+      '200':
+        description: New access/refresh token pair issued.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        accessToken:
+                          type: string
+                        refreshToken:
+                          type: string
+                        expiresIn:
+                          type: integer
+                          example: 900
+      '401':
+        description: REFRESH_TOKEN_INVALID or REFRESH_TOKEN_REUSED_FAMILY_REVOKED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/logout:
+  post:
+    operationId: authLogout
+    tags:
+      - Authentication
+    summary: Logout
+    description: >-
+      Invalidate the caller's current access token (via denylist) and
+      revoke the associated refresh token. API_SPECIFICATION.md Section
+      2.8.
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - refreshToken
+            properties:
+              refreshToken:
+                type: string
+              allDevices:
+                type: boolean
+                default: false
+                description: >-
+                  Revokes every refresh token issued to this user (used on
+                  password change/security incident).
+    responses:
+      '200':
+        description: Logged out.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        success:
+                          type: boolean
+                          const: true
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/password/forgot:
+  post:
+    operationId: authForgotPassword
+    tags:
+      - Authentication
+    summary: Forgot Password
+    description: >-
+      Initiate a password-reset flow for Officer/Admin-tier accounts.
+      Always returns success regardless of whether the username exists
+      (OWASP A07 anti-enumeration). API_SPECIFICATION.md Section 2.9.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+    responses:
+      '200':
+        description: Always success (anti-enumeration).
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        success:
+                          type: boolean
+                          const: true
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '429':
+        $ref: './components/responses.yaml#/TooManyRequests'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/password/reset:
+  post:
+    operationId: authResetPassword
+    tags:
+      - Authentication
+    summary: Reset Password
+    description: >-
+      Complete the password-reset flow using the token issued by Forgot
+      Password. API_SPECIFICATION.md Section 2.10.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - resetToken
+              - newPassword
+            properties:
+              resetToken:
+                type: string
+              newPassword:
+                type: string
+                minLength: 12
+                description: >-
+                  Upper/lower/digit/special required; must not match any
+                  of the last 5 password hashes (SRS §8.1).
+    responses:
+      '200':
+        description: Password changed.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        success:
+                          type: boolean
+                          const: true
+      '400':
+        description: >-
+          VALIDATION_ERROR, PASSWORD_POLICY_VIOLATION, or
+          PASSWORD_REUSE_DENIED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '401':
+        description: RESET_TOKEN_INVALID_OR_EXPIRED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+      '500':
+        $ref: './components/responses.yaml#/InternalServerError'
+
+/api/v1/auth/token/validate:
+  get:
+    operationId: authTokenValidate
+    tags:
+      - Authentication
+    summary: Token Validation
+    description: >-
+      Verify that a bearer access token is still valid (not expired, not
+      denylisted) and retrieve its claims. API_SPECIFICATION.md Section
+      2.11.
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+    responses:
+      '200':
+        description: Token is valid.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        valid:
+                          type: boolean
+                          const: true
+                        userId:
+                          type: string
+                        userType:
+                          type: string
+                          enum:
+                            - citizen
+                            - officer
+                            - department_admin
+                            - corporation_admin
+                            - super_admin
+                        tenantId:
+                          type: string
+                        roles:
+                          type: array
+                          items:
+                            type: string
+                        expiresAt:
+                          type: string
+                          format: date-time
+      '401':
+        description: TOKEN_INVALID, TOKEN_EXPIRED, or TOKEN_REVOKED.
+        content:
+          application/json:
+            schema:
+              $ref: './components/schemas.yaml#/ErrorEnvelope'
+
+components:
+  schemas:
+    UsernamePasswordInput:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    CitizenAuthResult:
+      type: object
+      description: >-
+        Token issuance result for the Citizen OTP Verify operation
+        (API_SPECIFICATION.md Section 2.2).
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          example: 900
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            userType:
+              type: string
+              const: citizen
+            tenantId:
+              type: string
+            isNewRegistration:
+              type: boolean
+    StaffAuthResult:
+      type: object
+      description: >-
+        Token issuance result shared by Officer OTP Verify and MFA Verify
+        (API_SPECIFICATION.md Sections 2.4, 2.6).
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          example: 900
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            userType:
+              type: string
+              enum:
+                - officer
+                - department_admin
+                - corporation_admin
+                - super_admin
+            roles:
+              type: array
+              items:
+                type: string
+            scope:
+              type: object
+              properties:
+                scopeType:
+                  type: string
+                  enum:
+                    - ward
+                    - department
+                    - tenant
+                scopeId:
+                  type: string
+  parameters:
+    CorrelationIdHeader:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: >-
+        Optional client-supplied correlation identifier
+        (API_SPECIFICATION.md Section 1.14); generated at the Gateway if
+        absent.
+      schema:
+        type: string

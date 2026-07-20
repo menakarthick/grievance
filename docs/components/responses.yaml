@@ -1,0 +1,333 @@
+Success:
+  description: >-
+    Successful, synchronous, complete response (13-HTTP-Status-Codes.md
+    Section 13.2.1). Used for GET reads and PATCH/PUT updates that
+    complete synchronously.
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/SuccessEnvelope'
+      examples:
+        default:
+          value:
+            success: true
+            data: {}
+            meta:
+              requestId: req_9f2c4a1b
+
+Created:
+  description: >-
+    A new resource was created synchronously
+    (13-HTTP-Status-Codes.md Section 13.2.2).
+  headers:
+    Location:
+      description: Canonical URL of the newly created resource.
+      schema:
+        type: string
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/SuccessEnvelope'
+      examples:
+        default:
+          value:
+            success: true
+            data:
+              id: cmp_88291
+            meta:
+              requestId: req_9f2c4a1b
+
+Accepted:
+  description: >-
+    The request has been accepted for asynchronous processing; the
+    outcome is not yet known at response time (13-HTTP-Status-Codes.md
+    Section 13.2.3). Callers poll the corresponding status endpoint or
+    consume a notification (12-Standard-Response-Formats.md Section
+    12.13 Async Processing Response).
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/SuccessEnvelope'
+      examples:
+        default:
+          value:
+            success: true
+            data:
+              jobId: exp_7f3a1b2c
+              status: queued
+            meta:
+              requestId: req_9f2c4a1b
+
+NoContent:
+  description: >-
+    The request succeeded and there is intentionally no response body
+    (13-HTTP-Status-Codes.md Section 13.2.4) - the standard shape for a
+    successful soft-delete.
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+
+ValidationError:
+  description: >-
+    The request is malformed, or fails field-level validation, before any
+    business logic is evaluated (13-HTTP-Status-Codes.md Section 13.4.1;
+    12-Standard-Response-Formats.md Section 12.4). error.category is
+    `validation`.
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: validation
+              code: FIELD_VALIDATION_FAILED
+              message: One or more fields failed validation.
+              details:
+                - field: location.wardId
+                  issue: REQUIRED
+                  message: location.wardId is required.
+            meta:
+              requestId: req_9f2c4a1b
+
+Unauthorized:
+  description: >-
+    Missing, malformed, expired, or revoked credential
+    (13-HTTP-Status-Codes.md Section 13.4.2). error.category is
+    `authentication`. Never distinguishes "wrong password" from "unknown
+    username" (OWASP A07 anti-enumeration, API_SPECIFICATION.md Section
+    2.9).
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: authentication
+              code: CREDENTIAL_INVALID
+              message: The supplied credential is missing, invalid, or expired.
+            meta:
+              requestId: req_9f2c4a1b
+
+Forbidden:
+  description: >-
+    The credential is valid, but the caller's role/scope does not permit
+    the requested action on this specific resource
+    (13-HTTP-Status-Codes.md Section 13.4.3). error.category is
+    `authorization`. Never reveals which specific permission/scope check
+    failed (API_SPECIFICATION.md Section 12.6).
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: authorization
+              code: PERMISSION_DENIED
+              message: You do not have permission to perform this action.
+            meta:
+              requestId: req_9f2c4a1b
+
+NotFound:
+  description: >-
+    The resource does not exist, or exists but is excluded from default
+    queries as soft-deleted (13-HTTP-Status-Codes.md Section 13.4.4;
+    DATABASE_DESIGN.md Section 21). error.category is `business`.
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: business
+              code: RESOURCE_NOT_FOUND
+              message: The requested resource could not be found.
+            meta:
+              requestId: req_9f2c4a1b
+
+Conflict:
+  description: >-
+    The request is well-formed but conflicts with the current state of
+    the resource - e.g. COMPLAINT_ALREADY_CLOSED, refresh-token reuse,
+    CONCURRENT_MODIFICATION (13-HTTP-Status-Codes.md Section 13.4.7).
+    error.category is `business`.
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: business
+              code: CONCURRENT_MODIFICATION
+              message: This resource was modified by another request. Refresh and retry.
+            meta:
+              requestId: req_9f2c4a1b
+
+TooManyRequests:
+  description: >-
+    The caller has exceeded a rate limit (13-HTTP-Status-Codes.md Section
+    13.4.15, Section 13.7). error.category is `business`, error.code is
+    `RATE_LIMITED`. The response always includes a Retry-After value
+    communicating how long the client must wait before retrying
+    (12-Standard-Response-Formats.md Section 12.12).
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+    Retry-After:
+      description: Seconds to wait before retrying (12-Standard-Response-Formats.md Section 12.12).
+      schema:
+        type: integer
+        example: 30
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: business
+              code: RATE_LIMITED
+              message: Too many requests. Please try again later.
+            meta:
+              requestId: req_9f2c4a1b
+
+InternalServerError:
+  description: >-
+    An unexpected, unhandled failure occurred server-side
+    (13-HTTP-Status-Codes.md Section 13.5.1). error.category is `server`.
+    Never includes a stack trace, internal file path, or raw exception
+    message.
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: server
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred. Please try again later.
+            meta:
+              requestId: req_9f2c4a1b
+
+ServiceUnavailable:
+  description: >-
+    A required upstream dependency (Claude API, Whisper, an SMS/WhatsApp/
+    Email/Maps provider) is currently unreachable or has exhausted its
+    own capacity (13-HTTP-Status-Codes.md Section 13.5.4). error.category
+    is `server`. Prefer a documented deterministic fallback
+    (ARCHITECTURE.md Section 8.3) over this response wherever one exists
+    for the specific capability.
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: server
+              code: UPSTREAM_UNAVAILABLE
+              message: A required upstream service is temporarily unavailable.
+            meta:
+              requestId: req_9f2c4a1b
+
+BusinessError:
+  description: >-
+    Generic business-rule violation response, returned under either 409
+    Conflict (a resource-state conflict) or 422 Unprocessable Entity (a
+    semantically invalid but syntactically well-formed request),
+    depending on which the specific endpoint documents - see the
+    decision tree in 13-HTTP-Status-Codes.md Section 13.6. error.category
+    is `business`.
+  headers:
+    X-Request-Id:
+      $ref: './headers.yaml#/X-Request-Id'
+    X-Correlation-Id:
+      $ref: './headers.yaml#/X-Correlation-Id'
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorEnvelope'
+      examples:
+        default:
+          value:
+            success: false
+            error:
+              category: business
+              code: COMPLAINT_ALREADY_CLOSED
+              message: This complaint has already been closed and cannot be modified.
+            meta:
+              requestId: req_9f2c4a1b

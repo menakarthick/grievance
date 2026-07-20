@@ -1,0 +1,203 @@
+FileUploadMultipart:
+  description: >-
+    Generic multipart file-upload body shared by the File Upload endpoint
+    (11-File-Management-APIs.md Section 11.1.1) and the Complaint
+    Attachment Upload endpoint (API_SPECIFICATION.md Section 4.3), both of
+    which route through the identical extension allow-list, magic-byte
+    MIME verification, and antivirus-scan pipeline (SRS Section 8.2).
+  required: true
+  content:
+    multipart/form-data:
+      schema:
+        type: object
+        required:
+          - file
+          - assetCategory
+        properties:
+          file:
+            type: string
+            format: binary
+            description: >-
+              The uploaded file. Extension and MIME type are verified
+              server-side against the allow-list for the declared
+              assetCategory (SRS Section 8.2); the client-declared
+              Content-Type is never trusted alone.
+          assetCategory:
+            type: string
+            description: >-
+              FILE_ASSET_CATEGORY reference value (DATABASE_DESIGN.md
+              Section 30) - e.g. before_photo, after_photo,
+              supporting_document, complaint_attachment.
+          linkedEntityType:
+            type: string
+            description: >-
+              Polymorphic target entity type this file attaches to
+              (DATABASE_DESIGN.md Section 12). Omitted where the target
+              entity is already implied by the URL (e.g. Complaint
+              Attachment Upload).
+          linkedEntityId:
+            type: string
+            description: Polymorphic target entity identifier.
+
+VoiceComplaintMultipart:
+  description: >-
+    Multipart body for filing a grievance via a recorded voice note
+    (API_SPECIFICATION.md Section 4.2), per the Voice Complaint Flow
+    (SRS Section 3.6).
+  required: true
+  content:
+    multipart/form-data:
+      schema:
+        type: object
+        required:
+          - audioFile
+        properties:
+          audioFile:
+            type: string
+            format: binary
+            description: >-
+              WAV, MP3, or OGG recording, max 10 MB / 5 minutes duration
+              (SRS Section 8.2). Verified server-side by magic-byte MIME
+              inspection and antivirus scan before persistence.
+          location:
+            $ref: './schemas.yaml#/GeoPoint'
+          languageHint:
+            type: string
+            enum:
+              - ta
+              - en
+            description: >-
+              Optional hint for the Voice Agent's language-detection step
+              (SRS Section 3.6); the agent's own detection is authoritative
+              regardless of this hint.
+
+NotificationSend:
+  description: >-
+    Notification-dispatch body shared by the SMS, Email, and WhatsApp send
+    endpoints (08-Notification-APIs.md Sections 8.2.1, 8.3.1, 8.4.1). The
+    Push send endpoint (Section 8.5.1) uses the same shape plus a required
+    `channel` sub-selector and an optional `deepLinkUrl`, documented as an
+    override on that operation rather than duplicated here.
+  required: true
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - recipientUserId
+          - templateKey
+          - variables
+        properties:
+          recipientUserId:
+            type: string
+          templateKey:
+            type: string
+            description: >-
+              Notification template key, resolved against the tenant's
+              approved template catalog (08-Notification-APIs.md Section
+              8.9).
+          languageCode:
+            type: string
+            enum:
+              - ta
+              - en
+            description: Defaults to the recipient's configured language preference when absent.
+          variables:
+            type: object
+            description: Template placeholder values, keyed by placeholder name.
+          attachmentFileAssetIds:
+            type: array
+            items:
+              type: string
+            description: Email only (Section 8.3.1).
+          priority:
+            type: string
+            enum:
+              - normal
+              - high
+              - emergency
+      examples:
+        default:
+          value:
+            recipientUserId: usr_citizen_9931
+            templateKey: complaint_registered
+            languageCode: en
+            variables:
+              trackingId: TMBM-ENG-202607-000123
+            priority: normal
+
+ComplaintAssignment:
+  description: >-
+    Request body for POST /api/v1/complaints/{complaintId}/assignments
+    (API_SPECIFICATION.md Section 4.9). `assignedBy` and `assignedAt` are
+    server-derived from the caller's auth context and the request time,
+    never client-supplied.
+  required: true
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - officerId
+        properties:
+          officerId:
+            type: string
+          reason:
+            type: string
+      examples:
+        default:
+          value:
+            officerId: usr_officer_221
+            reason: Nearest available officer in Ward 14.
+
+AIClassification:
+  description: >-
+    Request body for POST /api/v1/ai/complaint-classification
+    (API_SPECIFICATION.md Section 5.2). The sibling priority-prediction
+    and department-recommendation endpoints (Sections 5.3, 5.4) accept the
+    same body with `text` omitted, since they classify against the
+    complaint already on file rather than free text.
+  required: true
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - complaintId
+        properties:
+          complaintId:
+            type: string
+          text:
+            type: string
+            minLength: 10
+            maxLength: 5000
+            description: >-
+              Free-text complaint description to classify. Required for
+              complaint-classification; omitted for priority-prediction
+              and department-recommendation.
+      examples:
+        default:
+          value:
+            complaintId: cmp_88291
+            text: There is no streetlight near the bus stop for three days.
+
+StatusUpdate:
+  description: >-
+    Minimal active/inactive toggle body shared by the Department,
+    Feature Flag, and Notification Provider status-update endpoints
+    (06-Administration-APIs.md Sections 6.1.4, 6.8.2, 6.9.2), each of
+    which exposes an `isActive` field on its underlying resource.
+  required: true
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - isActive
+        properties:
+          isActive:
+            type: boolean
+      examples:
+        default:
+          value:
+            isActive: false

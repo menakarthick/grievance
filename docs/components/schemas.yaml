@@ -1,0 +1,1447 @@
+SuccessEnvelope:
+  title: Success Envelope
+  type: object
+  description: >-
+    Standard success envelope used by every 2xx response across Sections
+    2-11 (12-Standard-Response-Formats.md Section 12.1).
+  required:
+    - success
+    - data
+  properties:
+    success:
+      type: boolean
+      const: true
+    data:
+      description: >-
+        Endpoint-specific payload, documented per operation. An object for
+        a single resource, an array for a collection.
+    meta:
+      $ref: '#/Metadata'
+  examples:
+    - success: true
+      data: {}
+      meta:
+        requestId: req_9f2c4a1b
+
+ErrorEnvelope:
+  title: Error Envelope
+  type: object
+  description: >-
+    Standard error envelope used by every non-2xx response across Sections
+    2-11 (12-Standard-Response-Formats.md Section 12.2).
+  required:
+    - success
+    - error
+  properties:
+    success:
+      type: boolean
+      const: false
+    error:
+      type: object
+      required:
+        - category
+        - code
+        - message
+      properties:
+        category:
+          type: string
+          enum:
+            - validation
+            - business
+            - authentication
+            - authorization
+            - server
+          description: >-
+            One of the five error categories fixed in
+            API_SPECIFICATION.md Section 12.2, mapped to HTTP status
+            codes per 13-HTTP-Status-Codes.md Section 13.12.
+        code:
+          type: string
+          description: >-
+            Stable, machine-readable reason code (e.g.
+            OTP_INVALID_OR_EXPIRED, COMPLAINT_ALREADY_CLOSED), documented
+            per endpoint. Never changes meaning within a major API
+            version (API_SPECIFICATION.md Section 15.8).
+        message:
+          type: string
+          description: >-
+            Human-readable, safe-to-display explanation. Never includes
+            a stack trace, internal file path, or raw exception detail
+            (13-HTTP-Status-Codes.md Section 13.5.1).
+        details:
+          type: array
+          description: >-
+            Present for validation errors; array of per-field issues
+            (12-Standard-Response-Formats.md Section 12.4).
+          items:
+            $ref: '#/ValidationError'
+    meta:
+      $ref: '#/Metadata'
+  examples:
+    - success: false
+      error:
+        category: business
+        code: COMPLAINT_ALREADY_CLOSED
+        message: This complaint has already been closed and cannot be modified.
+      meta:
+        requestId: req_9f2c4a1b
+
+Metadata:
+  title: Response Metadata
+  type: object
+  description: >-
+    Common `meta` block attached to every envelope
+    (12-Standard-Response-Formats.md Section 12.1).
+  required:
+    - requestId
+  properties:
+    requestId:
+      type: string
+      description: >-
+        Unique identifier for this request/response pair
+        (API_SPECIFICATION.md Section 1.15).
+      example: req_9f2c4a1b
+    correlationId:
+      type: string
+      description: >-
+        Present when the request participates in a multi-service chain
+        (API_SPECIFICATION.md Section 1.14).
+      example: corr_1a4b7e20
+    timestamp:
+      type: string
+      format: date-time
+      description: Server-side response-generation time, UTC.
+    pagination:
+      $ref: '#/Pagination'
+  examples:
+    - requestId: req_9f2c4a1b
+      correlationId: corr_1a4b7e20
+      timestamp: '2026-07-20T09:15:00Z'
+
+Pagination:
+  title: Pagination Metadata
+  type: object
+  description: >-
+    Combined keyset and offset pagination metadata
+    (API_SPECIFICATION.md Section 1.8; 12-Standard-Response-Formats.md
+    Section 12.3). An endpoint populates exactly one of the two field
+    groups below - never both on the same response.
+  properties:
+    nextCursor:
+      type:
+        - string
+        - "null"
+      description: Keyset cursor for the next page; absent/null on the final page.
+    hasMore:
+      type: boolean
+      description: True if a subsequent keyset page exists.
+    page:
+      type: integer
+      minimum: 1
+      description: 1-indexed current page (offset pagination).
+    size:
+      type: integer
+      minimum: 1
+      description: Items per page as requested, capped per endpoint (offset pagination).
+    totalCount:
+      type: integer
+      minimum: 0
+      description: Total matching items across all pages (offset pagination).
+    totalPages:
+      type: integer
+      minimum: 0
+      description: ceil(totalCount / size) (offset pagination).
+  examples:
+    - nextCursor: null
+      hasMore: false
+      page: 1
+      size: 20
+      totalCount: 12
+      totalPages: 1
+
+ValidationError:
+  title: Validation Error Detail
+  type: object
+  description: >-
+    Single field-level validation failure
+    (12-Standard-Response-Formats.md Section 12.4).
+  required:
+    - field
+    - issue
+  properties:
+    field:
+      type: string
+      description: >-
+        The offending field's name, using the same dot-notation as the
+        request body (e.g. location.wardId).
+    issue:
+      type: string
+      enum:
+        - REQUIRED
+        - INVALID_TYPE
+        - INVALID_ENUM_VALUE
+        - PATTERN_MISMATCH
+        - OUT_OF_RANGE
+        - TOO_LONG
+        - TOO_SHORT
+        - DUPLICATE_VALUE
+    message:
+      type: string
+      description: Human-readable, field-specific explanation.
+  examples:
+    - field: location.wardId
+      issue: REQUIRED
+      message: location.wardId is required.
+
+AsyncJob:
+  title: Async Job Status
+  type: object
+  description: >-
+    Long-running/asynchronous operation status, used by exports, bulk
+    jobs, and broadcasts (12-Standard-Response-Formats.md Section 12.13).
+  required:
+    - jobId
+    - status
+  properties:
+    jobId:
+      type: string
+      description: >-
+        Opaque job identifier - named exportJobId, bulkJobId,
+        broadcastId, or multipartUploadId per the specific endpoint
+        family.
+    status:
+      type: string
+      enum:
+        - queued
+        - processing
+        - completed
+        - failed
+        - cancelled
+    resultRef:
+      type: string
+      description: >-
+        Present only when status is completed - typically a fileAssetId
+        for exports, resolved through the File Management APIs.
+    failureReason:
+      type: string
+      description: Present only when status is failed.
+  examples:
+    - jobId: exp_7f3a1b2c
+      status: completed
+      resultRef: file_9d2e4f10
+
+AuditMetadata:
+  title: Audit Metadata
+  type: object
+  description: >-
+    Common fields captured on every audit/activity record
+    (10-Audit-APIs.md Section 10.1.3).
+  properties:
+    actorUserId:
+      type:
+        - string
+        - "null"
+      description: Null for system/scheduler-originated actions.
+    actorName:
+      type: string
+    action:
+      type: string
+      description: Dot-notation action key (entity.verb).
+    entityType:
+      type: string
+    entityId:
+      type: string
+    ipAddress:
+      type: string
+    deviceFingerprint:
+      type: string
+    userAgent:
+      type: string
+    correlationId:
+      type: string
+    requestId:
+      type: string
+    sessionId:
+      type: string
+    createdAt:
+      type: string
+      format: date-time
+  examples:
+    - actorUserId: usr_4b2a
+      actorName: R. Kumar
+      action: complaint.status_change
+      entityType: complaint
+      entityId: cmp_88291
+      ipAddress: 10.20.30.40
+      deviceFingerprint: fp_a1b2c3
+      userAgent: Mozilla/5.0
+      correlationId: corr_1a4b7e20
+      requestId: req_9f2c4a1b
+      sessionId: sess_5f6e7d
+      createdAt: '2026-07-20T09:15:00Z'
+
+UserReference:
+  title: User Reference
+  type: object
+  description: >-
+    Minimal user reference embedded in other resources (e.g. changedBy,
+    actorUserId/actorName pairs) across Audit, Complaint, and
+    Notification responses.
+  required:
+    - id
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+  examples:
+    - id: usr_4b2a
+      name: R. Kumar
+
+FileReference:
+  title: File Reference
+  type: object
+  description: >-
+    Minimal file reference returned by upload/attachment operations
+    (12-Standard-Response-Formats.md Section 12.6;
+    11-File-Management-APIs.md Section 11.1).
+  required:
+    - fileAssetId
+  properties:
+    fileAssetId:
+      type: string
+    assetCategory:
+      type: string
+      description: FILE_ASSET_CATEGORY reference value (DATABASE_DESIGN.md Section 30).
+    mimeType:
+      type: string
+    sizeBytes:
+      type: integer
+      minimum: 0
+    virusScanStatus:
+      type: string
+      enum:
+        - pending
+        - clean
+        - infected
+        - scan_failed
+  examples:
+    - fileAssetId: file_9d2e4f10
+      assetCategory: complaint_attachment
+      mimeType: image/jpeg
+      sizeBytes: 245678
+      virusScanStatus: clean
+
+GeoPoint:
+  title: Geo Point
+  type: object
+  description: >-
+    Latitude/longitude pair used throughout the Geographic APIs
+    (07-Geographic-APIs.md; DATABASE_DESIGN.md Section 26).
+  required:
+    - latitude
+    - longitude
+  properties:
+    latitude:
+      type: number
+      minimum: -90
+      maximum: 90
+    longitude:
+      type: number
+      minimum: -180
+      maximum: 180
+  examples:
+    - latitude: 12.9165
+      longitude: 80.1325
+
+Address:
+  title: Address
+  type: object
+  description: >-
+    Citizen registered-address shape (API_SPECIFICATION.md Section 3.3).
+  required:
+    - line1
+    - wardId
+    - pincode
+  properties:
+    line1:
+      type: string
+    line2:
+      type: string
+    wardId:
+      type: string
+    pincode:
+      type: string
+      pattern: '^[0-9]{6}$'
+  examples:
+    - line1: 12 Anna Nagar Main Road
+      line2: Near Water Tank
+      wardId: ward_014
+      pincode: '600045'
+
+AIResult:
+  title: AI Result Base
+  type: object
+  description: >-
+    Common AI-endpoint response fields
+    (12-Standard-Response-Formats.md Section 12.11).
+  properties:
+    confidenceScore:
+      type: number
+      minimum: 0
+      maximum: 1
+      description: >-
+        Model confidence in the returned result. Omitted, not zero, when
+        the fallback path (aiProviderDegraded) produced the result.
+    aiProviderDegraded:
+      type: boolean
+      description: >-
+        True when the response was produced by the deterministic
+        fallback path rather than the live Claude call
+        (ARCHITECTURE.md Section 8.3).
+  examples:
+    - confidenceScore: 0.92
+      aiProviderDegraded: false
+
+NotificationResult:
+  title: Notification Dispatch Result
+  type: object
+  description: >-
+    Common notification-dispatch response fields
+    (12-Standard-Response-Formats.md Section 12.8).
+  required:
+    - notificationDispatchId
+    - channel
+    - status
+  properties:
+    notificationDispatchId:
+      type: string
+    channel:
+      type: string
+      enum:
+        - sms
+        - email
+        - whatsapp
+        - push_mobile
+        - push_web
+        - push_browser
+        - in_app
+        - voice_call
+        - ivrs
+    status:
+      type: string
+      enum:
+        - Queued
+        - Accepted
+        - Sent
+        - Delivered
+        - Read
+        - Failed
+        - Expired
+        - Cancelled
+        - Retried
+    providerMessageId:
+      type:
+        - string
+        - "null"
+  examples:
+    - notificationDispatchId: notif_5a6b7c
+      channel: sms
+      status: Sent
+      providerMessageId: SMSGW-88291
+
+ReportResult:
+  title: Report Result Envelope
+  type: object
+  description: >-
+    Common report-response envelope covering both tabular and chart
+    shapes (09-Reports-APIs.md Section 9.1.3;
+    12-Standard-Response-Formats.md Section 12.9).
+  properties:
+    chartType:
+      type: string
+      enum:
+        - line
+        - bar
+        - pie
+        - heatmap
+        - table
+      description: Rendering hint only; never a hard rendering requirement.
+    generatedAt:
+      type: string
+      format: date-time
+      description: >-
+        When the underlying pre-aggregated Reporting Table snapshot was
+        computed - distinct from the response's own timestamp.
+    data:
+      description: Report-specific payload, documented per endpoint.
+  examples:
+    - chartType: line
+      generatedAt: '2026-07-20T06:00:00Z'
+      data: []
+
+RoleReference:
+  title: Role Reference
+  type: object
+  description: >-
+    Minimal role reference embedded in user and role-assignment
+    responses (06-Administration-APIs.md Section 6.4), a lightweight
+    subset of the full Role resource.
+  required:
+    - id
+    - name
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+    isSystemRole:
+      type: boolean
+      description: >-
+        True for the platform's built-in roles (Citizen, Officer,
+        Department Admin, Corporation Admin, Super Admin), which cannot
+        be deleted (06-Administration-APIs.md Section 6.4.4).
+  examples:
+    - id: role_officer
+      name: Officer
+      isSystemRole: true
+
+PermissionReference:
+  title: Permission Reference
+  type: object
+  description: >-
+    Minimal permission reference embedded in role-detail responses
+    (06-Administration-APIs.md Section 6.5), a lightweight subset of the
+    full Permission resource.
+  required:
+    - id
+    - resource
+    - action
+  properties:
+    id:
+      type: string
+    resource:
+      type: string
+      description: The RBAC resource this permission governs (e.g. complaint, department).
+    action:
+      type: string
+      description: The action permitted on the resource (e.g. read, write, assign).
+  examples:
+    - id: perm_complaint_assign
+      resource: complaint
+      action: assign
+
+DepartmentReference:
+  title: Department Reference
+  type: object
+  description: >-
+    Minimal department reference embedded in user, role-scope, and
+    reporting responses (06-Administration-APIs.md Section 6.1), a
+    lightweight subset of the full Department resource. Complements the
+    denormalized `departmentName` snapshot already carried directly on
+    complaint list/detail responses (DATABASE_DESIGN.md Section 4
+    denormalization note) for endpoints that need the identifier as
+    well as the label.
+  required:
+    - id
+    - name
+  properties:
+    id:
+      type: string
+    code:
+      type: string
+    name:
+      type: string
+  examples:
+    - id: dept_engineering
+      code: ENG
+      name: Engineering
+
+OfficerReference:
+  title: Officer Reference
+  type: object
+  description: >-
+    Minimal officer reference embedded in complaint assignment,
+    workflow, and reporting responses. Mirrors the officer/department
+    relationship on `staff_profile` (DATABASE_DESIGN.md Section 4)
+    without the full staff profile.
+  required:
+    - id
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+    departmentId:
+      type:
+        - string
+        - "null"
+      description: >-
+        Null for officers not yet attached to a department, or where
+        the caller's scope does not permit disclosing it.
+  examples:
+    - id: usr_officer_221
+      name: R. Kumar
+      departmentId: dept_engineering
+
+CitizenReference:
+  title: Citizen Reference
+  type: object
+  description: >-
+    Minimal citizen reference embedded in complaint and audit
+    responses. Mirrors the citizen/ward relationship on
+    `citizen_profile` (DATABASE_DESIGN.md Section 4) without exposing
+    the citizen's full profile, contact details, or unmasked PII
+    (ARCHITECTURE.md Section 8.2).
+  required:
+    - id
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+    wardId:
+      type:
+        - string
+        - "null"
+  examples:
+    - id: usr_citizen_9931
+      name: S. Priya
+      wardId: ward_014
+
+GeoReference:
+  title: Geographic Unit Reference
+  type: object
+  description: >-
+    Minimal reference to a node in the tenant's geographic/
+    administrative hierarchy (07-Geographic-APIs.md), common across
+    State/District/Corporation/Region/Zone/Division/Ward. Distinct from
+    `GeoPoint`, which carries raw coordinates rather than an
+    organizational-unit identity.
+  required:
+    - id
+    - name
+    - type
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+    type:
+      type: string
+      enum:
+        - state
+        - district
+        - corporation
+        - region
+        - zone
+        - division
+        - ward
+    parentId:
+      type:
+        - string
+        - "null"
+      description: >-
+        Null for the top-level unit in the hierarchy (07-Geographic-APIs.md
+        Section 7.8 GIS hierarchy).
+  examples:
+    - id: ward_014
+      name: Ward 14
+      type: ward
+      parentId: zone_03
+
+ComplaintSummary:
+  title: Complaint Summary
+  type: object
+  description: >-
+    Lightweight complaint shape returned by list views
+    (API_SPECIFICATION.md Section 4.8, GET /api/v1/complaints), carrying
+    the denormalized department-name and status-label snapshots rather
+    than full nested resources for list-rendering performance
+    (DATABASE_DESIGN.md Section 4).
+  required:
+    - id
+  properties:
+    id:
+      type: string
+    trackingId:
+      type: string
+      description: >-
+        Format {TenantCode}-{DeptCode}-{YYYYMM}-{SequenceNumber}
+        (SRS Section 3.8).
+      example: TMBM-ENG-202607-000123
+    statusLabel:
+      type: string
+    priority:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+    departmentName:
+      type: string
+    slaDueAt:
+      type:
+        - string
+        - "null"
+      format: date-time
+    createdAt:
+      type: string
+      format: date-time
+  examples:
+    - id: cmp_88291
+      trackingId: TMBM-ENG-202607-000123
+      statusLabel: Registered
+      priority: high
+      departmentName: Engineering
+      slaDueAt: '2026-07-23T09:15:00Z'
+      createdAt: '2026-07-20T09:15:00Z'
+
+ComplaintFullDetail:
+  title: Complaint Full Detail
+  type: object
+  description: >-
+    Full complaint resource returned by GET /api/v1/complaints/{complaintId}
+    and the update-response of PATCH /api/v1/complaints/{complaintId}
+    (API_SPECIFICATION.md Section 4.4, 4.5).
+  required:
+    - id
+  properties:
+    id:
+      type: string
+    trackingId:
+      type: string
+      example: TMBM-ENG-202607-000123
+    description:
+      type: string
+    categoryName:
+      type: string
+    statusLabel:
+      type: string
+    priority:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+    severity:
+      type: string
+    location:
+      type: object
+      description: >-
+        Structured location captured at registration; shape documented
+        per endpoint (typically an Address and/or GeoPoint composition).
+    currentOfficer:
+      $ref: '#/UserReference'
+    slaDueAt:
+      type:
+        - string
+        - "null"
+      format: date-time
+    createdAt:
+      type: string
+      format: date-time
+    resolvedAt:
+      type:
+        - string
+        - "null"
+      format: date-time
+    closedAt:
+      type:
+        - string
+        - "null"
+      format: date-time
+    attachments:
+      type: array
+      items:
+        $ref: '#/FileReference'
+  examples:
+    - id: cmp_88291
+      trackingId: TMBM-ENG-202607-000123
+      description: Streetlight not working for 3 days near the bus stop.
+      categoryName: Streetlight Repair
+      statusLabel: In Progress
+      priority: high
+      severity: moderate
+      location:
+        wardId: ward_014
+        latitude: 12.9165
+        longitude: 80.1325
+      currentOfficer:
+        id: usr_officer_221
+        name: R. Kumar
+      slaDueAt: '2026-07-23T09:15:00Z'
+      createdAt: '2026-07-20T09:15:00Z'
+      resolvedAt: null
+      closedAt: null
+      attachments:
+        - fileAssetId: file_9d2e4f10
+          assetCategory: complaint_attachment
+          mimeType: image/jpeg
+          sizeBytes: 245678
+          virusScanStatus: clean
+
+WorkflowStep:
+  title: Workflow Step
+  type: object
+  description: >-
+    A single event in a workflow/complaint history trail
+    (10-Audit-APIs.md Section 10.6), the audit-grade counterpart to the
+    citizen-facing complaint timeline view.
+  required:
+    - eventType
+    - createdAt
+  properties:
+    complaintId:
+      type: string
+    eventType:
+      type: string
+      enum:
+        - status_change
+        - assignment
+        - escalation
+        - approval
+    fromValue:
+      type:
+        - string
+        - "null"
+    toValue:
+      type:
+        - string
+        - "null"
+    actorUserId:
+      type:
+        - string
+        - "null"
+      description: Null for system/scheduler-originated events.
+    actorName:
+      type: string
+    note:
+      type: string
+    createdAt:
+      type: string
+      format: date-time
+  examples:
+    - complaintId: cmp_88291
+      eventType: status_change
+      fromValue: Registered
+      toValue: In Progress
+      actorUserId: usr_officer_221
+      actorName: R. Kumar
+      note: Field visit scheduled.
+      createdAt: '2026-07-20T10:00:00Z'
+
+SLAStatus:
+  title: SLA Status
+  type: object
+  description: >-
+    Computed SLA due/breach status for a complaint, derived from the
+    versioned SLA rule in effect at assignment time (DATABASE_DESIGN.md
+    Section 4 sla_tracking; ARCHITECTURE.md SLA Monitor scheduler).
+  required:
+    - dueAt
+  properties:
+    dueAt:
+      type: string
+      format: date-time
+    breachedAt:
+      type:
+        - string
+        - "null"
+      format: date-time
+    escalatedTo:
+      type:
+        - string
+        - "null"
+      description: >-
+        Officer/role escalated to on breach (09-Reports-APIs.md SLA
+        Breach Report).
+    resolutionHours:
+      type:
+        - number
+        - "null"
+      description: >-
+        Hours between assignment and resolution, present once resolved
+        (API_SPECIFICATION.md SLA Compliance Report section).
+  examples:
+    - dueAt: '2026-07-23T09:15:00Z'
+      breachedAt: null
+      escalatedTo: null
+      resolutionHours: null
+
+JWTToken:
+  title: JWT Access Token Claims
+  type: object
+  description: >-
+    Decoded claim set carried by the RS256-signed JWT access token
+    (14-API-Security.md Section 14.3), verified once at the API
+    Gateway. Documented here for reference; the wire-level token itself
+    is an opaque bearer string (see `bearerAuth` in
+    securitySchemes.yaml).
+  required:
+    - userId
+    - userType
+    - tenantId
+  properties:
+    userId:
+      type: string
+    userType:
+      type: string
+      enum:
+        - citizen
+        - officer
+        - department_admin
+        - corporation_admin
+        - super_admin
+    tenantId:
+      type: string
+    roles:
+      type: array
+      items:
+        type: string
+      description: Present for staff (non-citizen) tokens.
+    scope:
+      type: object
+      description: Present for staff (non-citizen) tokens.
+      properties:
+        scopeType:
+          type: string
+          enum:
+            - ward
+            - department
+            - tenant
+        scopeId:
+          type: string
+  examples:
+    - userId: usr_officer_221
+      userType: officer
+      tenantId: tmbm
+      roles:
+        - role_officer
+      scope:
+        scopeType: ward
+        scopeId: ward_014
+
+RefreshToken:
+  title: Refresh Token Result
+  type: object
+  description: >-
+    Token pair issued by POST /api/v1/auth/token/refresh
+    (API_SPECIFICATION.md Section 2.7). The refresh token is single-use
+    and rotated on every call (14-API-Security.md Section 14.4).
+  required:
+    - accessToken
+    - refreshToken
+    - expiresIn
+  properties:
+    accessToken:
+      type: string
+    refreshToken:
+      type: string
+    expiresIn:
+      type: integer
+      example: 900
+  examples:
+    - accessToken: eyJhbGciOiJSUzI1NiJ9.token
+      refreshToken: 8f14e1a2-0000-4000-8000-000000000001
+      expiresIn: 900
+
+OTPRequest:
+  title: OTP Request
+  type: object
+  description: >-
+    Request body for POST /api/v1/auth/citizen/otp/request
+    (API_SPECIFICATION.md Section 2.1).
+  required:
+    - mobileNumber
+  properties:
+    mobileNumber:
+      type: string
+      pattern: '^([6-9]\d{9}|\+[1-9]\d{6,14})$'
+      example: '9876543210'
+  examples:
+    - mobileNumber: '9876543210'
+
+OTPVerification:
+  title: OTP Verification
+  type: object
+  description: >-
+    Request body for POST /api/v1/auth/citizen/otp/verify
+    (API_SPECIFICATION.md Section 2.2).
+  required:
+    - requestId
+    - mobileNumber
+    - otp
+  properties:
+    requestId:
+      type: string
+      format: uuid
+    mobileNumber:
+      type: string
+    otp:
+      type: string
+      pattern: '^\d{6}$'
+    name:
+      type: string
+      description: Required only on first registration.
+  examples:
+    - requestId: 8f14e1a2-0000-4000-8000-000000000001
+      mobileNumber: '9876543210'
+      otp: '482913'
+
+LoginRequest:
+  title: Login Request
+  type: object
+  description: >-
+    Username/password request body shared by officer and admin login
+    (API_SPECIFICATION.md Section 2.3, 2.5).
+  required:
+    - username
+    - password
+  properties:
+    username:
+      type: string
+    password:
+      type: string
+      format: password
+  examples:
+    - username: r.kumar
+      password: '**********'
+
+LoginResponse:
+  title: Login Response
+  type: object
+  description: >-
+    Token-issuance result returned after successful citizen OTP
+    verification, or officer/admin OTP-and-MFA verification
+    (API_SPECIFICATION.md Section 2.2, 2.4, 2.6). Within `user`, `roles`
+    and `scope` are populated only for staff (non-citizen) users, and
+    `isNewRegistration` only for citizen users.
+  required:
+    - accessToken
+    - refreshToken
+    - expiresIn
+    - user
+  properties:
+    accessToken:
+      type: string
+    refreshToken:
+      type: string
+    expiresIn:
+      type: integer
+      example: 900
+    user:
+      type: object
+      required:
+        - id
+        - userType
+        - tenantId
+      properties:
+        id:
+          type: string
+        userType:
+          type: string
+          enum:
+            - citizen
+            - officer
+            - department_admin
+            - corporation_admin
+            - super_admin
+        tenantId:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        scope:
+          type: object
+          properties:
+            scopeType:
+              type: string
+              enum:
+                - ward
+                - department
+                - tenant
+            scopeId:
+              type: string
+        isNewRegistration:
+          type: boolean
+  examples:
+    - accessToken: eyJhbGciOiJSUzI1NiJ9.token
+      refreshToken: 8f14e1a2-0000-4000-8000-000000000001
+      expiresIn: 900
+      user:
+        id: usr_officer_221
+        userType: officer
+        tenantId: tmbm
+        roles:
+          - role_officer
+        scope:
+          scopeType: ward
+          scopeId: ward_014
+
+SearchRequest:
+  title: Search Request
+  type: object
+  description: >-
+    Common free-text search and date-range filter shape underlying the
+    Audit Global Search (10-Audit-APIs.md Section 10.11) and File
+    Search (11-File-Management-APIs.md Section 11.11) endpoints, both
+    backed by MySQL FULLTEXT in Phase-1. Transported as query
+    parameters (see `search`/`cursor` in parameters.yaml); documented
+    here as a schema for client SDK reuse.
+  required:
+    - q
+  properties:
+    q:
+      type: string
+      minLength: 1
+    createdAtFrom:
+      type:
+        - string
+        - "null"
+      format: date-time
+    createdAtTo:
+      type:
+        - string
+        - "null"
+      format: date-time
+    cursor:
+      type: string
+    limit:
+      type: integer
+      minimum: 1
+  examples:
+    - q: streetlight
+      createdAtFrom: '2026-07-01T00:00:00Z'
+      createdAtTo: '2026-07-20T00:00:00Z'
+      cursor: null
+      limit: 50
+
+BulkOperationResult:
+  title: Bulk Operation Result
+  type: object
+  description: >-
+    Standard result envelope for a bulk operation carried out over a
+    set of items (12-Standard-Response-Formats.md Section 12.5).
+    Returned with HTTP 200/202 even when some items fail - success or
+    failure is tracked per-item, not per-request.
+  required:
+    - totalCount
+    - succeededCount
+    - failedCount
+    - results
+  properties:
+    totalCount:
+      type: integer
+      minimum: 0
+    succeededCount:
+      type: integer
+      minimum: 0
+    failedCount:
+      type: integer
+      minimum: 0
+    results:
+      type: array
+      items:
+        type: object
+        required:
+          - itemId
+          - status
+        properties:
+          itemId:
+            type: string
+          status:
+            type: string
+            enum:
+              - succeeded
+              - failed
+              - skipped
+          error:
+            type:
+              - object
+              - "null"
+            description: >-
+              Present only when status is failed, shaped as the
+              standard error object (12-Standard-Response-Formats.md
+              Section 12.2), scoped to this item.
+  examples:
+    - totalCount: 3
+      succeededCount: 2
+      failedCount: 1
+      results:
+        - itemId: notif_5a6b7c
+          status: succeeded
+        - itemId: notif_5a6b7d
+          status: succeeded
+        - itemId: notif_5a6b7e
+          status: failed
+          error:
+            category: business
+            code: PROVIDER_REJECTED
+            message: The provider rejected this recipient.
+
+Attachment:
+  title: Attachment
+  type: object
+  description: >-
+    File-attachment shape returned by the File Management search/list
+    endpoints (11-File-Management-APIs.md Section 11.11), a richer
+    superset of `FileReference` that adds the polymorphic link back to
+    its owning entity and any classification tags.
+  required:
+    - fileAssetId
+  properties:
+    fileAssetId:
+      type: string
+    assetCategory:
+      type: string
+      description: FILE_ASSET_CATEGORY reference value (DATABASE_DESIGN.md Section 30).
+    mimeType:
+      type: string
+    sizeBytes:
+      type: integer
+      minimum: 0
+    virusScanStatus:
+      type: string
+      enum:
+        - pending
+        - clean
+        - infected
+        - scan_failed
+    linkedEntityType:
+      type:
+        - string
+        - "null"
+      description: Polymorphic target entity type this file attaches to (DATABASE_DESIGN.md Section 12).
+    linkedEntityId:
+      type:
+        - string
+        - "null"
+    tags:
+      type: array
+      items:
+        type: string
+    createdAt:
+      type: string
+      format: date-time
+  examples:
+    - fileAssetId: file_9d2e4f10
+      assetCategory: complaint_attachment
+      mimeType: image/jpeg
+      sizeBytes: 245678
+      virusScanStatus: clean
+      linkedEntityType: complaint
+      linkedEntityId: cmp_88291
+      tags:
+        - before_photo
+      createdAt: '2026-07-20T09:15:00Z'
+
+Notification:
+  title: Notification
+  type: object
+  description: >-
+    Full notification-dispatch resource returned by the Notification
+    History and In-App Notification detail endpoints
+    (08-Notification-APIs.md Section 8.6, 8.10), a superset of the
+    lightweight dispatch-confirmation shape in `NotificationResult`.
+  required:
+    - notificationDispatchId
+    - channel
+    - status
+  properties:
+    notificationDispatchId:
+      type: string
+    channel:
+      type: string
+      enum:
+        - sms
+        - email
+        - whatsapp
+        - push_mobile
+        - push_web
+        - push_browser
+        - in_app
+        - voice_call
+        - ivrs
+    templateKey:
+      type: string
+    status:
+      type: string
+      enum:
+        - Queued
+        - Accepted
+        - Sent
+        - Delivered
+        - Read
+        - Failed
+        - Expired
+        - Cancelled
+        - Retried
+    renderedTitle:
+      type: string
+    renderedSubject:
+      type: string
+    renderedBody:
+      type: string
+    providerMessageId:
+      type:
+        - string
+        - "null"
+    sentAt:
+      type:
+        - string
+        - "null"
+      format: date-time
+    deliveredAt:
+      type:
+        - string
+        - "null"
+      format: date-time
+    readAt:
+      type:
+        - string
+        - "null"
+      format: date-time
+    linkedComplaintId:
+      type:
+        - string
+        - "null"
+    linkedEntityType:
+      type: string
+    linkedEntityId:
+      type: string
+  examples:
+    - notificationDispatchId: notif_5a6b7c
+      channel: sms
+      templateKey: complaint_registered
+      status: Delivered
+      renderedBody: Your complaint TMBM-ENG-202607-000123 has been registered.
+      providerMessageId: SMSGW-88291
+      sentAt: '2026-07-20T09:15:05Z'
+      deliveredAt: '2026-07-20T09:15:12Z'
+      readAt: null
+      linkedComplaintId: cmp_88291
+
+AIClassificationResult:
+  title: AI Classification Result
+  description: >-
+    Response payload for POST /api/v1/ai/complaint-classification
+    (API_SPECIFICATION.md Section 5.2), extending the common `AIResult`
+    fields with the classification outcome.
+  allOf:
+    - $ref: '#/AIResult'
+    - type: object
+      required:
+        - detectedCategoryId
+      properties:
+        detectedCategoryId:
+          type: string
+        detectedSeverity:
+          type: string
+        detectedLanguage:
+          type: string
+  examples:
+    - confidenceScore: 0.92
+      aiProviderDegraded: false
+      detectedCategoryId: cat_streetlight
+      detectedSeverity: moderate
+      detectedLanguage: en
+
+VoiceTranscription:
+  title: Voice Transcription
+  description: >-
+    Response payload for POST /api/v1/ai/speech-to-text
+    (API_SPECIFICATION.md Section 5.1), extending the common `AIResult`
+    fields with the transcription outcome.
+  allOf:
+    - $ref: '#/AIResult'
+    - type: object
+      required:
+        - transcriptText
+        - detectedLanguage
+      properties:
+        transcriptText:
+          type: string
+        detectedLanguage:
+          type: string
+          enum:
+            - ta
+            - en
+  examples:
+    - confidenceScore: 0.88
+      aiProviderDegraded: false
+      transcriptText: There is no streetlight near the bus stop for three days.
+      detectedLanguage: en
+
+ReportSummary:
+  title: Report Summary (KPI)
+  type: object
+  description: >-
+    Single KPI row returned by the Reports Dashboard and KPI Summary
+    endpoints (09-Reports-APIs.md Section 9.2.1, 9.2.4).
+  required:
+    - kpiKey
+    - value
+  properties:
+    kpiKey:
+      type: string
+    label:
+      type: string
+    value:
+      type: number
+    unit:
+      type: string
+    trendDirection:
+      type: string
+      description: e.g. up/down/flat, documented per KPI (09-Reports-APIs.md Section 9.2.1).
+    changePercent:
+      type: number
+  examples:
+    - kpiKey: complaints_registered_today
+      label: Complaints Registered Today
+      value: 42
+      unit: count
+      trendDirection: up
+      changePercent: 12.5
+
+ReportExport:
+  title: Report Export Job
+  type: object
+  description: >-
+    Export-job tracking shape shared by the Reports Export
+    (09-Reports-APIs.md Section 9.10) and Audit Export
+    (10-Audit-APIs.md Section 10.12) endpoints, following the generic
+    Async Processing Response pattern (12-Standard-Response-Formats.md
+    Section 12.13).
+  required:
+    - exportJobId
+    - status
+  properties:
+    exportJobId:
+      type: string
+    status:
+      type: string
+      enum:
+        - queued
+        - processing
+        - completed
+        - failed
+        - cancelled
+    fileAssetId:
+      type:
+        - string
+        - "null"
+      description: Present only when status is completed.
+    failureReason:
+      type:
+        - string
+        - "null"
+      description: Present only when status is failed.
+  examples:
+    - exportJobId: exp_7f3a1b2c
+      status: completed
+      fileAssetId: file_9d2e4f10
+      failureReason: null

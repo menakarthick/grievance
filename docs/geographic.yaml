@@ -1,0 +1,2050 @@
+/api/v1/geo/states:
+  get:
+    operationId: geoListStates
+    tags: [Geographic]
+    summary: List States
+    description: >-
+      Shared civil-geography State catalog (reference_value, domain
+      STATE). 07-Geographic-APIs.md Section 7.1.1.
+    parameters:
+      - name: countryCode
+        in: query
+        schema: { type: string, default: IN }
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - name: size
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+    responses:
+      '200':
+        description: State list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/State'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: geoCreateState
+    tags: [Geographic]
+    summary: Create State
+    description: >-
+      Super Admin only — global catalog, not tenant-scoped
+      (DATABASE_DESIGN.md §33 Master Data Governance).
+      07-Geographic-APIs.md Section 7.1.3.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, name]
+            properties:
+              code: { type: string }
+              name: { type: string, minLength: 2, maxLength: 100 }
+              countryCode: { type: string, default: IN }
+    responses:
+      '201':
+        description: State created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/State'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '409':
+        description: STATE_CODE_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/states/{stateId}:
+  parameters:
+    - name: stateId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetState
+    tags: [Geographic]
+    summary: Get State
+    description: 07-Geographic-APIs.md Section 7.1.2.
+    responses:
+      '200':
+        description: State detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/State'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: geoUpdateState
+    tags: [Geographic]
+    summary: Update State
+    description: 07-Geographic-APIs.md Section 7.1.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, minLength: 2, maxLength: 100 }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: State updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/State'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  delete:
+    operationId: geoDeleteState
+    tags: [Geographic]
+    summary: Delete State (Deactivate)
+    description: 07-Geographic-APIs.md Section 7.1.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/geo/districts:
+  get:
+    operationId: geoListDistricts
+    tags: [Geographic]
+    summary: List Districts
+    description: 07-Geographic-APIs.md Section 7.2.1.
+    parameters:
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: District list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/District'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: geoCreateDistrict
+    tags: [Geographic]
+    summary: Create District
+    description: 07-Geographic-APIs.md Section 7.2.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, name]
+            properties:
+              code: { type: string }
+              name: { type: string, minLength: 2, maxLength: 100 }
+    responses:
+      '201':
+        description: District created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/District'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '409':
+        description: DISTRICT_CODE_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/districts/{districtId}:
+  parameters:
+    - name: districtId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetDistrict
+    tags: [Geographic]
+    summary: Get District
+    description: 07-Geographic-APIs.md Section 7.2.3.
+    responses:
+      '200':
+        description: District detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/District'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: geoUpdateDistrict
+    tags: [Geographic]
+    summary: Update District
+    description: 07-Geographic-APIs.md Section 7.2.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, minLength: 2, maxLength: 100 }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: District updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/District'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  delete:
+    operationId: geoDeleteDistrict
+    tags: [Geographic]
+    summary: Delete District (Deactivate)
+    description: 07-Geographic-APIs.md Section 7.2.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: DISTRICT_HAS_ACTIVE_ZONES.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/corporations:
+  get:
+    operationId: geoListCorporations
+    tags: [Geographic]
+    summary: List Corporations
+    description: >-
+      Fixed-orgUnitType='corporation' view over org_unit
+      (DATABASE_DESIGN.md §28). 07-Geographic-APIs.md Section 7.3.1.
+    parameters:
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Corporation-level org unit list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/OrgUnitNode'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '501':
+        description: NOT_ENABLED — use_generic_org_hierarchy feature flag is off.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  post:
+    operationId: geoCreateCorporation
+    tags: [Geographic]
+    summary: Create Corporation
+    description: 07-Geographic-APIs.md Section 7.3.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, name]
+            properties:
+              code: { type: string }
+              name: { type: string, minLength: 2, maxLength: 100 }
+    responses:
+      '201':
+        description: Corporation-level org unit created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '409':
+        description: ORG_UNIT_CODE_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/corporations/{corporationId}:
+  parameters:
+    - name: corporationId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetCorporation
+    tags: [Geographic]
+    summary: Get Corporation
+    description: 07-Geographic-APIs.md Section 7.3.3.
+    responses:
+      '200':
+        description: Corporation-level org unit detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  patch:
+    operationId: geoUpdateCorporation
+    tags: [Geographic]
+    summary: Update Corporation
+    description: 07-Geographic-APIs.md Section 7.3.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, minLength: 2, maxLength: 100 }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: Corporation-level org unit updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  delete:
+    operationId: geoDeleteCorporation
+    tags: [Geographic]
+    summary: Delete Corporation (Deactivate)
+    description: 07-Geographic-APIs.md Section 7.3.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: ORG_UNIT_HAS_ACTIVE_CHILDREN.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/regions:
+  get:
+    operationId: geoListRegions
+    tags: [Geographic]
+    summary: List Regions
+    description: 07-Geographic-APIs.md Section 7.4.1.
+    parameters:
+      - name: corporationId
+        in: query
+        schema: { type: string }
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Region-level org unit list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/OrgUnitNode'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  post:
+    operationId: geoCreateRegion
+    tags: [Geographic]
+    summary: Create Region
+    description: 07-Geographic-APIs.md Section 7.4.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, name, corporationId]
+            properties:
+              code: { type: string }
+              name: { type: string, minLength: 2, maxLength: 100 }
+              corporationId: { type: string }
+    responses:
+      '201':
+        description: Region-level org unit created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: CORPORATION_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: ORG_UNIT_CODE_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/regions/{regionId}:
+  parameters:
+    - name: regionId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetRegion
+    tags: [Geographic]
+    summary: Get Region
+    description: 07-Geographic-APIs.md Section 7.4.3.
+    responses:
+      '200':
+        description: Region-level org unit detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  patch:
+    operationId: geoUpdateRegion
+    tags: [Geographic]
+    summary: Update Region
+    description: 07-Geographic-APIs.md Section 7.4.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, minLength: 2, maxLength: 100 }
+              corporationId: { type: string }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: Region-level org unit updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  delete:
+    operationId: geoDeleteRegion
+    tags: [Geographic]
+    summary: Delete Region (Deactivate)
+    description: 07-Geographic-APIs.md Section 7.4.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: ORG_UNIT_HAS_ACTIVE_CHILDREN.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/zones:
+  get:
+    operationId: geoListZones
+    tags: [Geographic]
+    summary: List Zones
+    description: 07-Geographic-APIs.md Section 7.5.1.
+    parameters:
+      - name: districtId
+        in: query
+        schema: { type: string }
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Zone list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Zone'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: geoCreateZone
+    tags: [Geographic]
+    summary: Create Zone
+    description: 07-Geographic-APIs.md Section 7.5.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, name, districtId]
+            properties:
+              code: { type: string }
+              name: { type: string, minLength: 2, maxLength: 100 }
+              districtId: { type: string }
+    responses:
+      '201':
+        description: Zone created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Zone'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: DISTRICT_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: ZONE_CODE_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/zones/{zoneId}:
+  parameters:
+    - name: zoneId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetZone
+    tags: [Geographic]
+    summary: Get Zone
+    description: 07-Geographic-APIs.md Section 7.5.3.
+    responses:
+      '200':
+        description: Zone detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Zone'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: geoUpdateZone
+    tags: [Geographic]
+    summary: Update Zone
+    description: 07-Geographic-APIs.md Section 7.5.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, minLength: 2, maxLength: 100 }
+              districtId: { type: string }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: Zone updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Zone'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  delete:
+    operationId: geoDeleteZone
+    tags: [Geographic]
+    summary: Delete Zone (Deactivate)
+    description: 07-Geographic-APIs.md Section 7.5.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: ZONE_HAS_ACTIVE_WARDS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/divisions:
+  get:
+    operationId: geoListDivisions
+    tags: [Geographic]
+    summary: List Divisions
+    description: 07-Geographic-APIs.md Section 7.6.1.
+    parameters:
+      - name: regionId
+        in: query
+        schema: { type: string }
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Division-level org unit list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/OrgUnitNode'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  post:
+    operationId: geoCreateDivision
+    tags: [Geographic]
+    summary: Create Division
+    description: 07-Geographic-APIs.md Section 7.6.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, name, regionId]
+            properties:
+              code: { type: string }
+              name: { type: string, minLength: 2, maxLength: 100 }
+              regionId: { type: string }
+    responses:
+      '201':
+        description: Division-level org unit created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: REGION_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: ORG_UNIT_CODE_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/divisions/{divisionId}:
+  parameters:
+    - name: divisionId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetDivision
+    tags: [Geographic]
+    summary: Get Division
+    description: 07-Geographic-APIs.md Section 7.6.3.
+    responses:
+      '200':
+        description: Division-level org unit detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  patch:
+    operationId: geoUpdateDivision
+    tags: [Geographic]
+    summary: Update Division
+    description: 07-Geographic-APIs.md Section 7.6.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, minLength: 2, maxLength: 100 }
+              regionId: { type: string }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: Division-level org unit updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgUnitNode'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  delete:
+    operationId: geoDeleteDivision
+    tags: [Geographic]
+    summary: Delete Division (Deactivate)
+    description: 07-Geographic-APIs.md Section 7.6.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: ORG_UNIT_HAS_ACTIVE_CHILDREN.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/wards:
+  get:
+    operationId: geoListWards
+    tags: [Geographic]
+    summary: List Wards
+    description: 07-Geographic-APIs.md Section 7.7.1.
+    parameters:
+      - name: zoneId
+        in: query
+        schema: { type: string }
+      - name: isActive
+        in: query
+        schema: { type: boolean, default: true }
+      - $ref: './components/parameters.yaml#/page'
+      - name: size
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+    responses:
+      '200':
+        description: Ward list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Ward'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: geoCreateWard
+    tags: [Geographic]
+    summary: Create Ward
+    description: 07-Geographic-APIs.md Section 7.7.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, name, zoneId]
+            properties:
+              code: { type: string }
+              name: { type: string, minLength: 2, maxLength: 100 }
+              zoneId: { type: string }
+    responses:
+      '201':
+        description: Ward created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Ward'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: ZONE_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '409':
+        description: WARD_CODE_ALREADY_EXISTS.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/wards/{wardId}:
+  parameters:
+    - name: wardId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetWard
+    tags: [Geographic]
+    summary: Get Ward
+    description: 07-Geographic-APIs.md Section 7.7.3.
+    responses:
+      '200':
+        description: Ward detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Ward'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  patch:
+    operationId: geoUpdateWard
+    tags: [Geographic]
+    summary: Update Ward
+    description: 07-Geographic-APIs.md Section 7.7.4.
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, minLength: 2, maxLength: 100 }
+              zoneId: { type: string }
+              isActive: { type: boolean }
+    responses:
+      '200':
+        description: Ward updated.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Ward'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+  delete:
+    operationId: geoDeleteWard
+    tags: [Geographic]
+    summary: Delete Ward (Deactivate)
+    description: >-
+      Deactivation excludes it from new-registration pickers without
+      breaking existing references (DATABASE_DESIGN.md §21).
+      07-Geographic-APIs.md Section 7.7.5.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '409':
+        description: WARD_IN_ACTIVE_USE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/streets:
+  get:
+    operationId: geoListStreets
+    tags: [Geographic]
+    summary: List Streets
+    description: >-
+      Address-form autocomplete over reference_value rows, domain
+      STREET. 07-Geographic-APIs.md Section 7.8.1.
+    parameters:
+      - name: wardId
+        in: query
+        schema: { type: string }
+      - name: localityId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/search'
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Street list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Street'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: geoCreateStreet
+    tags: [Geographic]
+    summary: Create Street
+    description: 07-Geographic-APIs.md Section 7.8.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, wardId]
+            properties:
+              name: { type: string, minLength: 2, maxLength: 150 }
+              wardId: { type: string }
+              localityId: { type: string }
+    responses:
+      '201':
+        description: Street created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Street'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: WARD_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/streets/{streetId}:
+  parameters:
+    - name: streetId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetStreet
+    tags: [Geographic]
+    summary: Get Street
+    description: 07-Geographic-APIs.md Section 7.8.3.
+    responses:
+      '200':
+        description: Street detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Street'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/geo/localities:
+  get:
+    operationId: geoListLocalities
+    tags: [Geographic]
+    summary: List Localities
+    description: >-
+      Address-form dropdown over reference_value rows, domain LOCALITY.
+      07-Geographic-APIs.md Section 7.9.1.
+    parameters:
+      - name: wardId
+        in: query
+        schema: { type: string }
+      - $ref: './components/parameters.yaml#/page'
+      - $ref: './components/parameters.yaml#/size'
+    responses:
+      '200':
+        description: Locality list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Locality'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+  post:
+    operationId: geoCreateLocality
+    tags: [Geographic]
+    summary: Create Locality
+    description: 07-Geographic-APIs.md Section 7.9.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, wardId]
+            properties:
+              name: { type: string, minLength: 2, maxLength: 150 }
+              wardId: { type: string }
+    responses:
+      '201':
+        description: Locality created.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Locality'
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: WARD_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/localities/{localityId}:
+  parameters:
+    - name: localityId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetLocality
+    tags: [Geographic]
+    summary: Get Locality
+    description: 07-Geographic-APIs.md Section 7.9.3.
+    responses:
+      '200':
+        description: Locality detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/Locality'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+
+/api/v1/geo/gis/status:
+  get:
+    operationId: geoGisStatus
+    tags: [Geographic]
+    summary: GIS Capability Status
+    description: >-
+      Whether GIS is enabled and which boundary-bearing levels are
+      populated. 07-Geographic-APIs.md Section 7.10.1.
+    responses:
+      '200':
+        description: GIS status.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        gisEnabled: { type: boolean }
+                        boundaryEntityTypesPopulated:
+                          type: array
+                          items: { type: string }
+                        mapsProviderConfigured: { type: boolean }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+
+/api/v1/geo/gis/hierarchy:
+  get:
+    operationId: geoGisHierarchy
+    tags: [Geographic]
+    summary: GIS Administrative Hierarchy Tree
+    description: >-
+      Nested administrative hierarchy annotated with which nodes have a
+      stored boundary. 07-Geographic-APIs.md Section 7.10.2.
+    parameters:
+      - name: rootOrgUnitId
+        in: query
+        schema: { type: string }
+    responses:
+      '200':
+        description: Hierarchy tree.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GisHierarchyNode'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/map/config:
+  get:
+    operationId: geoMapConfig
+    tags: [Geographic]
+    summary: Map Configuration
+    description: >-
+      Default map rendering configuration for the tenant's Officer/
+      Admin Portal. 07-Geographic-APIs.md Section 7.11.1.
+    responses:
+      '200':
+        description: Map configuration.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        mapProvider:
+                          type: string
+                          enum: [google_maps, openstreetmap]
+                        defaultCenter:
+                          $ref: './components/schemas.yaml#/GeoPoint'
+                        defaultZoom: { type: integer }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/map/markers:
+  get:
+    operationId: geoMapMarkers
+    tags: [Geographic]
+    summary: Map Markers
+    description: >-
+      Complaint pins within a map viewport bounding box.
+      07-Geographic-APIs.md Section 7.11.2.
+    parameters:
+      - name: swLatitude
+        in: query
+        required: true
+        schema: { type: number, minimum: -90, maximum: 90 }
+      - name: swLongitude
+        in: query
+        required: true
+        schema: { type: number, minimum: -180, maximum: 180 }
+      - name: neLatitude
+        in: query
+        required: true
+        schema: { type: number, minimum: -90, maximum: 90 }
+      - name: neLongitude
+        in: query
+        required: true
+        schema: { type: number, minimum: -180, maximum: 180 }
+      - name: statusId
+        in: query
+        schema: { type: string }
+      - name: departmentId
+        in: query
+        schema: { type: string }
+    responses:
+      '200':
+        description: Complaint map markers.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          complaintId: { type: string }
+                          trackingId: { type: string }
+                          latitude: { type: number }
+                          longitude: { type: number }
+                          statusLabel: { type: string }
+                          priority: { type: string }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/reverse-geocode:
+  post:
+    operationId: geoReverseGeocode
+    tags: [Geographic]
+    summary: Reverse Geocode
+    description: >-
+      Resolve a single lat/long pair to a human-readable address and
+      ward, via the configured Maps provider with caching.
+      07-Geographic-APIs.md Section 7.12.1.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [latitude, longitude]
+            properties:
+              latitude: { type: number, minimum: -90, maximum: 90 }
+              longitude: { type: number, minimum: -180, maximum: 180 }
+    responses:
+      '200':
+        description: Reverse-geocode result.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        resolvedAddress: { type: string }
+                        resolvedWardId: { type: string }
+                        providerName: { type: string }
+                        cached: { type: boolean }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '503':
+        description: MAPS_PROVIDER_UNAVAILABLE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/reverse-geocode/batch:
+  post:
+    operationId: geoBatchReverseGeocode
+    tags: [Geographic]
+    summary: Batch Reverse Geocode
+    description: >-
+      Resolve multiple lat/long pairs in one call — used by Analytics/
+      Heatmap back-fill jobs. 07-Geographic-APIs.md Section 7.12.2.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [points]
+            properties:
+              points:
+                type: array
+                minItems: 1
+                maxItems: 100
+                items:
+                  type: object
+                  required: [latitude, longitude]
+                  properties:
+                    latitude: { type: number, minimum: -90, maximum: 90 }
+                    longitude: { type: number, minimum: -180, maximum: 180 }
+    responses:
+      '200':
+        description: Batch reverse-geocode results.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          latitude: { type: number }
+                          longitude: { type: number }
+                          resolvedAddress: { type: string }
+                          resolvedWardId: { type: string }
+                          cached: { type: boolean }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '503':
+        description: MAPS_PROVIDER_UNAVAILABLE.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/complaints/nearby:
+  get:
+    operationId: geoNearbyComplaints
+    tags: [Geographic, Complaint]
+    summary: Nearby Complaints
+    description: >-
+      Find complaints registered near a given coordinate.
+      07-Geographic-APIs.md Section 7.13.1.
+    parameters:
+      - name: latitude
+        in: query
+        required: true
+        schema: { type: number, minimum: -90, maximum: 90 }
+      - name: longitude
+        in: query
+        required: true
+        schema: { type: number, minimum: -180, maximum: 180 }
+      - name: radiusMeters
+        in: query
+        schema: { type: integer, default: 500, maximum: 5000 }
+      - name: limit
+        in: query
+        schema: { type: integer }
+    responses:
+      '200':
+        description: Nearby complaints.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id: { type: string }
+                          trackingId: { type: string }
+                          distanceMeters: { type: number }
+                          categoryName: { type: string }
+                          statusLabel: { type: string }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/heatmap:
+  get:
+    operationId: geoComplaintHeatmap
+    tags: [Geographic]
+    summary: Complaint Heatmap
+    description: >-
+      Pre-aggregated complaint density data (geo_analytics_snapshot),
+      never computed live over complaint. 07-Geographic-APIs.md
+      Section 7.14.1.
+    parameters:
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: departmentId
+        in: query
+        schema: { type: string }
+      - name: categoryId
+        in: query
+        schema: { type: string }
+    responses:
+      '200':
+        description: Heatmap density data.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          wardId: { type: string }
+                          zoneId: { type: string }
+                          latitude: { type: number }
+                          longitude: { type: number }
+                          complaintCount: { type: integer }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/analytics:
+  get:
+    operationId: geoAnalyticsSummary
+    tags: [Geographic]
+    summary: Geo Analytics Summary
+    description: >-
+      Complaint density and category breakdown per ward/zone/division
+      for a period. 07-Geographic-APIs.md Section 7.15.1.
+    parameters:
+      - name: orgUnitLevel
+        in: query
+        schema:
+          type: string
+          enum: [ward, zone, division]
+      - name: periodStart
+        in: query
+        required: true
+        schema: { type: string, format: date }
+      - name: periodEnd
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        description: Geo analytics summary.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          orgUnitId: { type: string }
+                          orgUnitName: { type: string }
+                          complaintCount: { type: integer }
+                          categoryBreakdown:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                categoryName: { type: string }
+                                count: { type: integer }
+      '400':
+        $ref: './components/responses.yaml#/ValidationError'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/boundaries:
+  get:
+    operationId: geoListBoundaries
+    tags: [Geographic]
+    summary: List Boundaries
+    description: >-
+      Every administrative unit that currently has a stored boundary.
+      07-Geographic-APIs.md Section 7.16.1.
+    parameters:
+      - name: boundaryEntityType
+        in: query
+        schema:
+          type: string
+          enum: [ward, zone, district, org_unit]
+      - $ref: './components/parameters.yaml#/page'
+      - name: size
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+    responses:
+      '200':
+        description: Boundary list.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/GeoBoundarySummary'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+/api/v1/geo/boundaries/{orgUnitId}:
+  parameters:
+    - name: orgUnitId
+      in: path
+      required: true
+      schema: { type: string }
+  get:
+    operationId: geoGetBoundary
+    tags: [Geographic]
+    summary: Get Boundary
+    description: >-
+      GeoJSON polygon boundary for map rendering.
+      07-Geographic-APIs.md Section 7.16.2.
+    responses:
+      '200':
+        description: Boundary detail.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GeoBoundaryDetail'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  put:
+    operationId: geoReplaceBoundary
+    tags: [Geographic]
+    summary: Create/Replace Boundary
+    description: >-
+      Full-replace of a boundary's GeoJSON — a singleton attribute of
+      its owning entity, not an independently addressable collection
+      member. 07-Geographic-APIs.md Section 7.16.3.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [boundaryGeoJson]
+            properties:
+              boundaryGeoJson:
+                type: object
+                description: GeoJSON Polygon or MultiPolygon.
+              source:
+                type: string
+    responses:
+      '200':
+        description: Boundary created or replaced.
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: './components/schemas.yaml#/SuccessEnvelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GeoBoundarySummary'
+      '400':
+        description: VALIDATION_ERROR, including malformed GeoJSON.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        description: ORG_UNIT_NOT_FOUND.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+  delete:
+    operationId: geoDeleteBoundary
+    tags: [Geographic]
+    summary: Delete Boundary
+    description: 07-Geographic-APIs.md Section 7.16.4.
+    responses:
+      '204':
+        $ref: './components/responses.yaml#/NoContent'
+      '401':
+        $ref: './components/responses.yaml#/Unauthorized'
+      '403':
+        $ref: './components/responses.yaml#/Forbidden'
+      '404':
+        $ref: './components/responses.yaml#/NotFound'
+      '501':
+        description: NOT_ENABLED.
+        content:
+          application/json:
+            schema: { $ref: './components/schemas.yaml#/ErrorEnvelope' }
+
+components:
+  schemas:
+    State:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        countryCode: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    District:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Zone:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        districtId: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    Ward:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        zoneId: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    OrgUnitNode:
+      type: object
+      description: >-
+        Shared shape for the Corporation/Region/Division convenience
+        views over the generic org_unit entity (DATABASE_DESIGN.md
+        §28); orgUnitType distinguishes which level a given row is.
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        orgUnitType:
+          type: string
+          enum: [corporation, region, division]
+        parentOrgUnitId: { type: [string, "null"] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    Street:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        wardId: { type: string }
+        localityId: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+    Locality:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        wardId: { type: string }
+        createdAt: { type: string, format: date-time }
+    GisHierarchyNode:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        orgUnitType: { type: string }
+        hasBoundary: { type: boolean }
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/GisHierarchyNode'
+    GeoBoundarySummary:
+      type: object
+      properties:
+        boundaryEntityType: { type: string }
+        boundaryEntityId: { type: string }
+        centroidLatitude: { type: number }
+        centroidLongitude: { type: number }
+        version: { type: integer }
+        updatedAt: { type: string, format: date-time }
+    GeoBoundaryDetail:
+      type: object
+      properties:
+        boundaryEntityType: { type: string }
+        boundaryEntityId: { type: string }
+        boundaryGeoJson:
+          type: object
+          description: GeoJSON Polygon or MultiPolygon.
+        centroidLatitude: { type: number }
+        centroidLongitude: { type: number }
+        version: { type: integer }
