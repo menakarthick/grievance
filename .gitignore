@@ -1,1 +1,4 @@
 .claude/
+node_modules/
+postman/_bundled-openapi.json
+postman/_manifest.json

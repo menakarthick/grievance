@@ -1,0 +1,17 @@
+{
+  "name": "grievance-platform-postman",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generator and validator for the Grievance Platform Postman collection, derived from docs/openapi.yaml.",
+  "scripts": {
+    "bundle": "redocly bundle ../docs/openapi.yaml -o _bundled-openapi.json --ext json",
+    "generate": "node generate-collection.js",
+    "validate": "node validate-coverage.js",
+    "build": "npm run bundle && npm run generate && npm run validate"
+  },
+  "license": "SEE LICENSE IN ../LICENSE",
+  "devDependencies": {
+    "@redocly/cli": "^1.0.0",
+    "postman-collection": "^5.3.0"
+  }
+}
