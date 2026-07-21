@@ -32,8 +32,11 @@ function list(name, fallback) {
     .filter(Boolean);
 }
 
+const nodeEnv = str('NODE_ENV', 'development');
+const isTest = nodeEnv === 'test';
+
 const env = {
-  nodeEnv: str('NODE_ENV', 'development'),
+  nodeEnv,
   appName: str('APP_NAME', 'grievance-platform-backend'),
   port: num('PORT', 3000),
   apiPrefix: str('API_PREFIX', '/api/v1'),
@@ -47,7 +50,12 @@ const env = {
   db: {
     host: str('DB_HOST', '127.0.0.1'),
     port: num('DB_PORT', 3306),
-    name: str('DB_NAME', 'grievance_platform'),
+    // Mirrors config/config.js's `test: { database: `${base.database}_test` }`
+    // convention exactly — the live Sequelize instance (this file, used by
+    // src/models/index.js) must resolve to the same test database the
+    // sequelize-cli migrations/seeders target, or NODE_ENV=test test runs
+    // would silently read/write the development database instead.
+    name: isTest ? `${str('DB_NAME', 'grievance_platform')}_test` : str('DB_NAME', 'grievance_platform'),
     user: str('DB_USER', 'grievance_app'),
     password: str('DB_PASSWORD', ''),
     dialect: str('DB_DIALECT', 'mysql'),
@@ -72,6 +80,30 @@ const env = {
     issuer: str('JWT_ISSUER', 'grievance-platform'),
     audience: str('JWT_AUDIENCE', 'grievance-platform-clients'),
     accessTokenTtlSeconds: num('JWT_ACCESS_TOKEN_TTL_SECONDS', 900),
+    // 7-day expiry, single-use, rotated on every use (docs/14-API-Security.md §14.4).
+    refreshTokenTtlSeconds: num('JWT_REFRESH_TOKEN_TTL_SECONDS', 7 * 24 * 60 * 60),
+  },
+
+  otp: {
+    // Single-use, 5-minute TTL (docs/authentication.yaml otpExpirySeconds).
+    ttlSeconds: num('OTP_TTL_SECONDS', 300),
+    resendCooldownSeconds: num('OTP_RESEND_COOLDOWN_SECONDS', 30),
+    // "OTP Request | per mobile number | 3 / 10 minutes" (13-HTTP-Status-Codes.md §13.7).
+    requestMaxPerWindow: num('OTP_REQUEST_MAX_PER_WINDOW', 3),
+    requestWindowSeconds: num('OTP_REQUEST_WINDOW_SECONDS', 600),
+    maxVerifyAttempts: num('OTP_MAX_VERIFY_ATTEMPTS', 5),
+  },
+
+  mfa: {
+    challengeTtlSeconds: num('MFA_CHALLENGE_TTL_SECONDS', 300),
+  },
+
+  security: {
+    // "5 attempts -> 15-minute lock" (SRS §8.1, 13-HTTP-Status-Codes.md §13.8).
+    loginMaxFailedAttempts: num('LOGIN_MAX_FAILED_ATTEMPTS', 5),
+    loginLockoutSeconds: num('LOGIN_LOCKOUT_SECONDS', 15 * 60),
+    passwordResetTtlSeconds: num('PASSWORD_RESET_TTL_SECONDS', 30 * 60),
+    passwordHistoryLimit: num('PASSWORD_HISTORY_LIMIT', 5),
   },
 
   upload: {
@@ -86,6 +118,6 @@ const env = {
 };
 
 env.isProduction = env.nodeEnv === 'production';
-env.isTest = env.nodeEnv === 'test';
+env.isTest = isTest;
 
 module.exports = env;

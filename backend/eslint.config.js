@@ -29,7 +29,17 @@ module.exports = [
     rules: { 'n/no-process-exit': 'off' },
   },
   {
-    ignores: ['node_modules/**', 'logs/**', 'uploads/**', 'src/config/keys/**'],
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.jest, ...globals.node },
+    },
+    rules: {
+      // Test fixtures/helpers are dev-only tooling, not published package code.
+      'n/no-extraneous-require': 'off',
+    },
+  },
+  {
+    ignores: ['node_modules/**', 'logs/**', 'uploads/**', 'src/config/keys/**', 'coverage/**'],
   },
   prettierConfig,
 ];

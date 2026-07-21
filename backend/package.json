@@ -18,9 +18,22 @@
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:seed": "sequelize-cli db:seed:all",
-    "db:seed:undo": "sequelize-cli db:seed:undo:all"
+    "db:seed:undo": "sequelize-cli db:seed:undo:all",
+    "db:migrate:test": "cross-env NODE_ENV=test sequelize-cli db:migrate",
+    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "test:unit": "cross-env NODE_ENV=test jest --runInBand tests/unit",
+    "test:integration": "cross-env NODE_ENV=test jest --runInBand tests/integration",
+    "pretest": "cross-env NODE_ENV=test sequelize-cli db:migrate"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "testTimeout": 20000
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
     "bullmq": "^5.34.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -32,6 +45,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "mysql2": "^3.12.0",
+    "otplib": "^12.0.1",
     "sequelize": "^6.37.5",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.0.5",
@@ -40,12 +54,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-n": "^17.15.1",
     "globals": "^15.14.0",
+    "ioredis-mock": "^8.13.1",
+    "jest": "^30.4.2",
     "nodemon": "^3.1.9",
     "prettier": "^3.4.2",
-    "sequelize-cli": "^6.6.2"
+    "sequelize-cli": "^6.6.2",
+    "supertest": "^7.2.2"
   }
 }

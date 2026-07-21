@@ -72,6 +72,12 @@ The server binds on `PORT` (default `3000`) even if MySQL/Redis are unreachable 
 | `npm run format` / `format:check`        | Prettier                                    |
 | `npm run db:migrate` / `db:migrate:undo` | Sequelize migrations                        |
 | `npm run db:seed` / `db:seed:undo`       | Sequelize seeders                           |
+| `npm test`                               | Unit + integration tests (Jest); runs migrations against `<DB_NAME>_test` first |
+| `npm run test:unit` / `test:integration` | Just one half of the suite                  |
+
+## Testing
+
+Integration tests run against a real MySQL database named `<DB_NAME>_test` (create it once — same user/grants as the main database) and an in-memory Redis (`ioredis-mock`, wired up in `tests/setup.js`, so no real Redis server is required to run the suite). `NODE_ENV=test` is set automatically by the `test*` scripts, which is what routes both the app's live Sequelize connection (`src/config/env.js`) and sequelize-cli at the `_test` database.
 
 ## Docker
 

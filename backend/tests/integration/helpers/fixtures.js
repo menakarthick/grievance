@@ -1,0 +1,94 @@
+'use strict';
+
+const crypto = require('crypto');
+const { authenticator } = require('otplib');
+const {
+  Tenant,
+  Role,
+  Permission,
+  RolePermission,
+  User,
+  StaffProfile,
+  MfaDevice,
+  UserRoleAssignment,
+} = require('../../../src/models');
+const { hashPassword } = require('../../../src/utils/password');
+
+function uniqueSuffix() {
+  return crypto.randomBytes(4).toString('hex');
+}
+
+function randomMobileNumber() {
+  return `9${crypto.randomInt(100000000, 999999999)}`;
+}
+
+async function getOrCreateTestTenant() {
+  const [tenant] = await Tenant.findOrCreate({
+    where: { code: 'TEST_AUTH' },
+    defaults: { name: 'Integration Test Tenant', tenantType: 'ULB', state: 'Test State', status: 'active' },
+  });
+  return tenant;
+}
+
+async function createStaffUser({ tenantId, userType = 'officer', password = 'Officer-Pass-1!' } = {}) {
+  const suffix = uniqueSuffix();
+  const passwordHash = await hashPassword(password);
+  const user = await User.create({
+    tenantId,
+    userType,
+    mobileNumber: randomMobileNumber(),
+    username: `${userType}_${suffix}`,
+    passwordHash,
+    status: 'active',
+  });
+  await StaffProfile.create({ userId: user.id, scopeType: 'department', scopeId: null, employeeId: `EMP-${suffix}` });
+  return { user, password };
+}
+
+// Corporation Admin / Super Admin with an already-enrolled TOTP device
+// (docs/authentication.yaml: MFA is mandatory for this tier — a fixture
+// without one can only exercise the MFA_NOT_ENROLLED path).
+async function createMfaEnrolledAdmin({ tenantId, userType = 'corporation_admin', password = 'Admin-Pass-1!' } = {}) {
+  const { user } = await createStaffUser({ tenantId, userType, password });
+  const totpSecret = authenticator.generateSecret();
+  await MfaDevice.create({ userId: user.id, deviceType: 'totp', secretReference: totpSecret, verifiedAt: new Date() });
+  return { user, password, totpSecret };
+}
+
+async function createAdminWithoutMfa({ tenantId, userType = 'corporation_admin', password = 'Admin-Pass-1!' } = {}) {
+  return createStaffUser({ tenantId, userType, password });
+}
+
+async function getOrCreateGlobalRole(name) {
+  const [role] = await Role.findOrCreate({
+    where: { tenantId: null, name },
+    defaults: { isSystemRole: true },
+  });
+  return role;
+}
+
+async function getOrCreatePermission(resource, action) {
+  const [permission] = await Permission.findOrCreate({ where: { resource, action } });
+  return permission;
+}
+
+async function grantPermissionToRole(roleId, permissionId) {
+  await RolePermission.findOrCreate({ where: { roleId, permissionId } });
+}
+
+async function assignRoleToUser(userId, roleId, scopeType = 'tenant', scopeId = null) {
+  await UserRoleAssignment.findOrCreate({ where: { userId, roleId, scopeType, scopeId } });
+}
+
+module.exports = {
+  uniqueSuffix,
+  randomMobileNumber,
+  getOrCreateTestTenant,
+  createStaffUser,
+  createMfaEnrolledAdmin,
+  createAdminWithoutMfa,
+  getOrCreateGlobalRole,
+  getOrCreatePermission,
+  grantPermissionToRole,
+  assignRoleToUser,
+};

@@ -13,6 +13,13 @@ function baseRedisOptions() {
     tls: env.redis.tls ? {} : undefined,
     lazyConnect: true,
     retryStrategy: (attempt) => Math.min(attempt * 500, 5000),
+    // Without this, ioredis queues commands indefinitely while
+    // (re)connecting and only rejects after `maxRetriesPerRequest` (default
+    // 20) reconnect attempts — tens of seconds of a hung request when Redis
+    // is genuinely down. A short command timeout lets every Redis-touching
+    // code path (rate limiter, OTP/token services) fail fast and degrade
+    // predictably instead of hanging the whole request.
+    commandTimeout: 3000,
   };
 }
 

@@ -1,19 +1,21 @@
 'use strict';
 
 const crypto = require('crypto');
+const argon2 = require('@node-rs/argon2');
+const { authenticator } = require('otplib');
 
 // Bootstrap Super Admin (Section 5: user_type ∈ Citizen/Officer/Admin
 // tiers; Section 3: a Super Admin's user row is the deliberate cross-tenant
-// exception, tenant_id null). Password hashing uses Node's built-in scrypt
-// only to avoid adding a new dependency before Phase 2 implements real auth
-// business logic — replace with the platform's actual auth hashing scheme
-// once the auth service lands, and rotate this password immediately after
-// first login in any real deployment.
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const derivedKey = crypto.scryptSync(password, salt, 64);
-  return `scrypt:${salt}:${derivedKey.toString('hex')}`;
-}
+// exception, tenant_id null). Argon2id password hashing per
+// docs/14-API-Security.md §14.2 — this replaces the earlier scrypt
+// placeholder now that the real Authentication module exists.
+//
+// Corporation Admin / Super Admin MFA is mandatory (docs/authentication.yaml
+// authAdminLogin), so this seeder also enrolls a TOTP device for the
+// bootstrap account — without one, the seeded admin could never complete
+// login. The generated secret is logged once, the same way the bootstrap
+// password is, so the pilot operator can add it to an authenticator app;
+// rotate it immediately in any real deployment.
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@tambaram.gov.in';
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'ChangeMe!123';
@@ -22,6 +24,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     const { QueryTypes } = Sequelize;
     const now = new Date();
+    const passwordHash = await argon2.hash(ADMIN_PASSWORD);
 
     await queryInterface.bulkInsert('user', [
       {
@@ -31,7 +34,7 @@ module.exports = {
         mobile_number: null,
         email: ADMIN_EMAIL,
         username: 'super_admin',
-        password_hash: hashPassword(ADMIN_PASSWORD),
+        password_hash: passwordHash,
         status: 'active',
         created_at: now,
         updated_at: now,
@@ -69,15 +72,38 @@ module.exports = {
       },
     ]);
 
+    // TOTP secret stored directly in secret_reference: a Phase-1
+    // simplification, documented in src/services/auth.service.js — no
+    // secrets-manager integration exists yet to hold the real reference.
+    const totpSecret = authenticator.generateSecret();
+    await queryInterface.bulkInsert('mfa_device', [
+      {
+        user_id: user.id,
+        device_type: 'totp',
+        secret_reference: totpSecret,
+        verified_at: now,
+        created_at: now,
+        updated_at: now,
+      },
+    ]);
+
     console.log(
       `[seed-admin-user] Super Admin created: ${ADMIN_EMAIL}. Set SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD env vars before ` +
-        're-seeding to avoid the fallback default password, and rotate it immediately once the auth service is implemented.',
+        're-seeding to avoid the fallback default password, and rotate both it and the MFA secret immediately in any ' +
+        `real deployment. TOTP secret (add to an authenticator app): ${totpSecret}`,
     );
   },
 
   async down(queryInterface) {
     await queryInterface.bulkDelete('user_role_assignment', {});
     await queryInterface.bulkDelete('staff_profile', { employee_id: 'SUPERADMIN-001' });
+    const [user] = await queryInterface.sequelize.query(`SELECT id FROM user WHERE email = :email`, {
+      replacements: { email: ADMIN_EMAIL },
+      type: queryInterface.sequelize.QueryTypes.SELECT,
+    });
+    if (user) {
+      await queryInterface.bulkDelete('mfa_device', { user_id: user.id });
+    }
     await queryInterface.bulkDelete('user', { email: ADMIN_EMAIL });
   },
 };
