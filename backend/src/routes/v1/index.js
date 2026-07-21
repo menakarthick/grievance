@@ -1,0 +1,38 @@
+'use strict';
+
+const { Router } = require('express');
+const { sendSuccess } = require('../../utils/apiResponse');
+
+const authRoutes = require('./auth.routes');
+const citizenRoutes = require('./citizen.routes');
+const complaintRoutes = require('./complaint.routes');
+const aiRoutes = require('./ai.routes');
+const adminRoutes = require('./admin.routes');
+const geoRoutes = require('./geo.routes');
+const notificationRoutes = require('./notification.routes');
+const reportRoutes = require('./report.routes');
+const auditRoutes = require('./audit.routes');
+const fileRoutes = require('./file.routes');
+
+const router = Router();
+
+// docs/15-API-Versioning.md §15.2: URI versioning, /api/v1 mounted once
+// here by src/app.js. Section 12.15's illustrative version-info shape.
+router.get('/', (req, res) => {
+  sendSuccess(res, {
+    data: { currentVersion: 'v1', supportedVersions: ['v1'] },
+  });
+});
+
+router.use('/auth', authRoutes);
+router.use('/citizens', citizenRoutes);
+router.use('/complaints', complaintRoutes);
+router.use('/ai', aiRoutes);
+router.use('/admin', adminRoutes);
+router.use('/geo', geoRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/reports', reportRoutes);
+router.use('/audit', auditRoutes);
+router.use('/files', fileRoutes);
+
+module.exports = router;

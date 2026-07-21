@@ -1,0 +1,5 @@
+node_modules
+logs
+uploads
+src/config/keys
+package-lock.json

@@ -1,0 +1,17 @@
+# Used when building backend/Dockerfile with the repo root as build context
+# (see backend/docker-compose.yml — docs/ must be in-context alongside
+# backend/ so the API spec can be copied in for Swagger UI).
+**/node_modules
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/logs
+backend/uploads
+backend/src/config/keys/*.pem
+postman/node_modules
+postman/_bundled-openapi.json
+postman/_manifest.json
+.git
+.gitignore
+**/*.log
+**/coverage

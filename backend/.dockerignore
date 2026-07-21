@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.example
+logs
+uploads
+src/config/keys/*.pem
+.git
+.gitignore
+.eslintcache
+coverage
+README.md
