@@ -11,6 +11,9 @@ const {
   StaffProfile,
   MfaDevice,
   UserRoleAssignment,
+  Department,
+  ComplaintCategory,
+  OfficerHierarchyLevel,
 } = require('../../../src/models');
 const { hashPassword } = require('../../../src/utils/password');
 const tokenService = require('../../../src/services/token.service');
@@ -31,7 +34,12 @@ async function getOrCreateTestTenant() {
   return tenant;
 }
 
-async function createStaffUser({ tenantId, userType = 'officer', password = 'Officer-Pass-1!' } = {}) {
+async function createStaffUser({
+  tenantId,
+  userType = 'officer',
+  password = 'Officer-Pass-1!',
+  departmentId = null,
+} = {}) {
   const suffix = uniqueSuffix();
   const passwordHash = await hashPassword(password);
   const user = await User.create({
@@ -42,8 +50,43 @@ async function createStaffUser({ tenantId, userType = 'officer', password = 'Off
     passwordHash,
     status: 'active',
   });
-  await StaffProfile.create({ userId: user.id, scopeType: 'department', scopeId: null, employeeId: `EMP-${suffix}` });
+  await StaffProfile.create({
+    userId: user.id,
+    departmentId,
+    scopeType: 'department',
+    scopeId: null,
+    employeeId: `EMP-${suffix}`,
+  });
   return { user, password };
+}
+
+async function createDepartment({ tenantId, code, name } = {}) {
+  const suffix = uniqueSuffix();
+  return Department.create({
+    tenantId,
+    code: code || `DP${suffix.slice(0, 6).toUpperCase()}`,
+    name: name || `Dept ${suffix}`,
+    isActive: true,
+  });
+}
+
+async function createCategory({ tenantId, departmentId, name, defaultPriority = 3 } = {}) {
+  const suffix = uniqueSuffix();
+  return ComplaintCategory.create({
+    tenantId,
+    departmentId,
+    name: name || `Category ${suffix}`,
+    defaultPriority,
+    isActive: true,
+  });
+}
+
+async function getOrCreateHierarchyLevel(tenantId, levelOrder, title) {
+  const [level] = await OfficerHierarchyLevel.findOrCreate({
+    where: { tenantId, levelOrder },
+    defaults: { title },
+  });
+  return level;
 }
 
 // Corporation Admin / Super Admin with an already-enrolled TOTP device
@@ -119,4 +162,7 @@ module.exports = {
   grantPermissionToRole,
   assignRoleToUser,
   tokenFor,
+  createDepartment,
+  createCategory,
+  getOrCreateHierarchyLevel,
 };

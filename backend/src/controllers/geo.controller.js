@@ -114,66 +114,107 @@ function referenceEntityNotFound(entityLabel, code) {
   });
 }
 
+// TODO(pending v1.1 client approval, DATABASE_DESIGN.md §36): once
+// org_unit / org_unit_type_definition (§28) are approved for physical
+// implementation, replace these four notEnabled() calls with real
+// Corporation/Region/Division services analogous to geo.service.js's
+// districtService/zoneService/wardService.
+const ORG_UNIT_NOT_ENABLED = notEnabled(
+  'Corporation/Region/Division require org_unit + org_unit_type_definition (DATABASE_DESIGN.md §28), which is v1.1 and Pending Client Review (§36).',
+);
+
+// TODO(pending v1.1 client approval, DATABASE_DESIGN.md §36): once
+// reference_domain / reference_value (§29) are approved, Street/Locality
+// Create should insert real rows the same way State's would.
+const REFERENCE_VALUE_NOT_ENABLED = notEnabled(
+  'Creating Street/Locality/State entries requires reference_domain + reference_value (DATABASE_DESIGN.md §29), which is v1.1 and Pending Client Review (§36).',
+);
+
+// TODO(pending v1.1 client approval, DATABASE_DESIGN.md §36): once
+// geo_boundary / geo_point_snapshot / reverse_geocode_cache /
+// geo_analytics_snapshot (§26) are approved, replace these with real
+// Map/Geocoding/Heatmap/Analytics/Boundaries services.
+const GIS_ENTITY_NOT_ENABLED = notEnabled(
+  'Map/Geocoding/Heatmap/Analytics/Boundaries require the GIS entities in DATABASE_DESIGN.md §26, which is v1.1 and Pending Client Review (§36).',
+);
+
 module.exports = {
-  // District
+  // District (§7.2) — real, v1.0-table-backed.
   listDistricts: districtControllers.list,
   createDistrict: districtControllers.create,
   getDistrict: districtControllers.get,
   updateDistrict: districtControllers.update,
   deleteDistrict: districtControllers.remove,
-  // Zone
+  // Zone (§7.5) — real, v1.0-table-backed.
   listZones: zoneControllers.list,
   createZone: zoneControllers.create,
   getZone: zoneControllers.get,
   updateZone: zoneControllers.update,
   deleteZone: zoneControllers.remove,
-  // Ward
+  // Ward (§7.7) — real, v1.0-table-backed.
   listWards: wardControllers.list,
   createWard: wardControllers.create,
   getWard: wardControllers.get,
   updateWard: wardControllers.update,
   deleteWard: wardControllers.remove,
-  // GIS (genuinely served)
+  // GIS Status/Hierarchy (§7.10.1-2) — genuinely served from v1.0 tables.
   gisStatus,
   gisHierarchy,
-  // State
+
+  // State (§7.1) — reference_value-backed (§29, v1.1, pending). List/Get
+  // are genuinely served (spec: "not feature-flag gated" -> honest empty
+  // catalog / 404). TODO(pending v1.1 approval): Create/Update/Delete need
+  // reference_domain + reference_value to exist before they can persist.
   listStates: emptyReferenceList(),
   getState: referenceEntityNotFound('State', 'STATE_NOT_FOUND'),
-  createState: notEnabled(),
-  updateState: notEnabled(),
-  deleteState: notEnabled(),
-  // Corporation / Region / Division (org_unit)
-  listCorporations: notEnabled(),
-  createCorporation: notEnabled(),
-  getCorporation: notEnabled(),
-  updateCorporation: notEnabled(),
-  deleteCorporation: notEnabled(),
-  listRegions: notEnabled(),
-  createRegion: notEnabled(),
-  getRegion: notEnabled(),
-  updateRegion: notEnabled(),
-  deleteRegion: notEnabled(),
-  listDivisions: notEnabled(),
-  createDivision: notEnabled(),
-  getDivision: notEnabled(),
-  updateDivision: notEnabled(),
-  deleteDivision: notEnabled(),
-  // Street / Locality
+  createState: REFERENCE_VALUE_NOT_ENABLED,
+  updateState: REFERENCE_VALUE_NOT_ENABLED,
+  deleteState: REFERENCE_VALUE_NOT_ENABLED,
+
+  // Corporation (§7.3) — org_unit-backed (§28, v1.1, pending). Spec itself
+  // gates every operation (including List) behind 501 when the
+  // use_generic_org_hierarchy feature flag is off, which it is.
+  listCorporations: ORG_UNIT_NOT_ENABLED,
+  createCorporation: ORG_UNIT_NOT_ENABLED,
+  getCorporation: ORG_UNIT_NOT_ENABLED,
+  updateCorporation: ORG_UNIT_NOT_ENABLED,
+  deleteCorporation: ORG_UNIT_NOT_ENABLED,
+  // Region (§7.4) — org_unit-backed (§28, v1.1, pending).
+  listRegions: ORG_UNIT_NOT_ENABLED,
+  createRegion: ORG_UNIT_NOT_ENABLED,
+  getRegion: ORG_UNIT_NOT_ENABLED,
+  updateRegion: ORG_UNIT_NOT_ENABLED,
+  deleteRegion: ORG_UNIT_NOT_ENABLED,
+  // Division (§7.6) — org_unit-backed (§28, v1.1, pending).
+  listDivisions: ORG_UNIT_NOT_ENABLED,
+  createDivision: ORG_UNIT_NOT_ENABLED,
+  getDivision: ORG_UNIT_NOT_ENABLED,
+  updateDivision: ORG_UNIT_NOT_ENABLED,
+  deleteDivision: ORG_UNIT_NOT_ENABLED,
+
+  // Street (§7.8) — reference_value-backed (§29, v1.1, pending). List/Get
+  // genuinely served, same rationale as State.
   listStreets: emptyReferenceList(),
-  createStreet: notEnabled(),
+  createStreet: REFERENCE_VALUE_NOT_ENABLED,
   getStreet: referenceEntityNotFound('Street', 'STREET_NOT_FOUND'),
+  // Locality (§7.9) — reference_value-backed (§29, v1.1, pending).
   listLocalities: emptyReferenceList(),
-  createLocality: notEnabled(),
+  createLocality: REFERENCE_VALUE_NOT_ENABLED,
   getLocality: referenceEntityNotFound('Locality', 'LOCALITY_NOT_FOUND'),
-  // Map / Geocoding / Heatmap / Analytics / Boundaries
-  mapConfig: notEnabled(),
-  mapMarkers: notEnabled(),
-  reverseGeocode: notEnabled(),
-  batchReverseGeocode: notEnabled(),
-  complaintHeatmap: notEnabled(),
-  analyticsSummary: notEnabled(),
-  listBoundaries: notEnabled(),
-  getBoundary: notEnabled(),
-  replaceBoundary: notEnabled(),
-  deleteBoundary: notEnabled(),
+
+  // Map (§7.11) / Reverse Geocoding (§7.12) / Heatmap (§7.14) /
+  // Geo Analytics (§7.15) / Boundaries (§7.16) — geo_boundary /
+  // geo_point_snapshot / reverse_geocode_cache / geo_analytics_snapshot
+  // -backed (§26, v1.1, pending). Spec gates every operation behind 501
+  // when the tenant's GIS feature flag is off, which it is.
+  mapConfig: GIS_ENTITY_NOT_ENABLED,
+  mapMarkers: GIS_ENTITY_NOT_ENABLED,
+  reverseGeocode: GIS_ENTITY_NOT_ENABLED,
+  batchReverseGeocode: GIS_ENTITY_NOT_ENABLED,
+  complaintHeatmap: GIS_ENTITY_NOT_ENABLED,
+  analyticsSummary: GIS_ENTITY_NOT_ENABLED,
+  listBoundaries: GIS_ENTITY_NOT_ENABLED,
+  getBoundary: GIS_ENTITY_NOT_ENABLED,
+  replaceBoundary: GIS_ENTITY_NOT_ENABLED,
+  deleteBoundary: GIS_ENTITY_NOT_ENABLED,
 };

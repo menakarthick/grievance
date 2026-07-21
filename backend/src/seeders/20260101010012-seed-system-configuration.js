@@ -11,9 +11,13 @@ const FEATURE_FLAGS = [
   { flagKey: 'whatsapp_notifications_enabled', isEnabled: false, flagType: 'boolean' },
 ];
 
+// providerType/providerName values match the system-supported-adapter
+// catalog in src/services/admin.service.js's SUPPORTED_PROVIDERS
+// (docs/06-Administration-APIs.md §6.11's providerType enum: ai, voice,
+// sms, whatsapp, email, maps — "smtp" is not one of the documented values).
 const PROVIDERS = [
-  { providerType: 'sms', providerName: 'default_sms_provider', secretReference: 'secrets/tambaram/sms-provider' },
-  { providerType: 'smtp', providerName: 'default_smtp_provider', secretReference: 'secrets/tambaram/smtp-provider' },
+  { providerType: 'sms', providerName: 'dlt_sms_gateway', secretReference: 'secrets/tambaram/sms-provider' },
+  { providerType: 'email', providerName: 'smtp_relay', secretReference: 'secrets/tambaram/smtp-provider' },
   { providerType: 'ai', providerName: 'claude', secretReference: 'secrets/tambaram/ai-provider' },
 ];
 

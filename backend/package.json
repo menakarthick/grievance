@@ -23,7 +23,8 @@
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "test:unit": "cross-env NODE_ENV=test jest --runInBand tests/unit",
     "test:integration": "cross-env NODE_ENV=test jest --runInBand tests/integration",
-    "pretest": "cross-env NODE_ENV=test sequelize-cli db:migrate"
+    "pretest": "cross-env NODE_ENV=test sequelize-cli db:migrate",
+    "build": "node -e \"require('./src/app.js'); console.log('build check passed: app and every route/controller/service/repository/model required without error'); process.exit(0);\""
   },
   "jest": {
     "testEnvironment": "node",

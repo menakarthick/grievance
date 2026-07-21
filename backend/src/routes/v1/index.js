@@ -28,7 +28,12 @@ router.use('/auth', authRoutes);
 router.use('/citizens', citizenRoutes);
 router.use('/complaints', complaintRoutes);
 router.use('/ai', aiRoutes);
-router.use('/admin', adminRoutes);
+// Administration resources have no common path prefix in the approved
+// contract (docs/administration.yaml: /departments, /users, /roles,
+// /permissions, /approval-workflows, /sla-rules, /escalation-rules,
+// /tenant-config, /feature-flags, /providers all sit directly under
+// /api/v1) — mounted at the router root, not under /admin.
+router.use(adminRoutes);
 router.use('/geo', geoRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/reports', reportRoutes);
