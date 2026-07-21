@@ -13,6 +13,7 @@ const {
   UserRoleAssignment,
 } = require('../../../src/models');
 const { hashPassword } = require('../../../src/utils/password');
+const tokenService = require('../../../src/services/token.service');
 
 function uniqueSuffix() {
   return crypto.randomBytes(4).toString('hex');
@@ -80,15 +81,42 @@ async function assignRoleToUser(userId, roleId, scopeType = 'tenant', scopeId = 
   await UserRoleAssignment.findOrCreate({ where: { userId, roleId, scopeType, scopeId } });
 }
 
+async function createCitizenUser({ tenantId } = {}) {
+  const user = await User.create({
+    tenantId,
+    userType: 'citizen',
+    mobileNumber: randomMobileNumber(),
+    status: 'active',
+  });
+  return { user };
+}
+
+// Issues a real, verifiable access token for a fixture user without going
+// through an HTTP login flow — the standard shortcut used across the auth
+// integration suite (see tests/integration/rbacMiddleware.test.js) for
+// tests whose focus is downstream of authentication.
+async function tokenFor(user, roles = [], scope = null) {
+  const { accessToken } = await tokenService.issueTokenPair({
+    userId: user.id,
+    userType: user.userType,
+    tenantId: user.tenantId,
+    roles,
+    scope,
+  });
+  return accessToken;
+}
+
 module.exports = {
   uniqueSuffix,
   randomMobileNumber,
   getOrCreateTestTenant,
   createStaffUser,
+  createCitizenUser,
   createMfaEnrolledAdmin,
   createAdminWithoutMfa,
   getOrCreateGlobalRole,
   getOrCreatePermission,
   grantPermissionToRole,
   assignRoleToUser,
+  tokenFor,
 };
