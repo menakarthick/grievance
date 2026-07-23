@@ -14,6 +14,12 @@ const {
   Department,
   ComplaintCategory,
   OfficerHierarchyLevel,
+  CitizenProfile,
+  District,
+  Zone,
+  Ward,
+  ComplaintStatusDefinition,
+  SlaRuleConfig,
 } = require('../../../src/models');
 const { hashPassword } = require('../../../src/utils/password');
 const tokenService = require('../../../src/services/token.service');
@@ -81,6 +87,19 @@ async function createCategory({ tenantId, departmentId, name, defaultPriority = 
   });
 }
 
+async function createSlaRule({ tenantId, departmentId, categoryId, priority, resolutionHours = 72 } = {}) {
+  return SlaRuleConfig.create({
+    tenantId,
+    departmentId,
+    categoryId,
+    priority,
+    resolutionHours,
+    version: 1,
+    effectiveFrom: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    effectiveTo: null,
+  });
+}
+
 async function getOrCreateHierarchyLevel(tenantId, levelOrder, title) {
   const [level] = await OfficerHierarchyLevel.findOrCreate({
     where: { tenantId, levelOrder },
@@ -134,6 +153,62 @@ async function createCitizenUser({ tenantId } = {}) {
   return { user };
 }
 
+async function createCitizenWithProfile({ tenantId, name, wardId = null } = {}) {
+  const { user } = await createCitizenUser({ tenantId });
+  const suffix = uniqueSuffix();
+  const profile = await CitizenProfile.create({
+    userId: user.id,
+    name: name || `Citizen ${suffix}`,
+    wardId,
+  });
+  return { user, profile };
+}
+
+async function createWardChain({ tenantId } = {}) {
+  const suffix = uniqueSuffix();
+  const district = await District.create({ tenantId, code: `D${suffix.slice(0, 6).toUpperCase()}`, name: `District ${suffix}` });
+  const zone = await Zone.create({
+    tenantId,
+    districtId: district.id,
+    code: `Z${suffix.slice(0, 6).toUpperCase()}`,
+    name: `Zone ${suffix}`,
+  });
+  const ward = await Ward.create({
+    tenantId,
+    zoneId: zone.id,
+    code: `W${suffix.slice(0, 6).toUpperCase()}`,
+    name: `Ward ${suffix}`,
+  });
+  return { district, zone, ward };
+}
+
+async function getComplaintStatus(tenantId, code) {
+  return ComplaintStatusDefinition.findOne({ where: { tenantId, code } });
+}
+
+// src/seeders/20260101010009-seed-complaint-statuses.js only seeds the
+// production-representative TAMBARAM tenant, not this suite's own
+// getOrCreateTestTenant() ('TEST_AUTH') — tests need their own copy of the
+// same tenant-configurable status catalog to exercise the lifecycle.
+const STATUS_DEFS = [
+  { code: 'REGISTERED', label: 'Registered', sortOrder: 1 },
+  { code: 'ASSIGNED', label: 'Assigned', sortOrder: 2 },
+  { code: 'IN_PROGRESS', label: 'In Progress', sortOrder: 3 },
+  { code: 'RESOLVED', label: 'Resolved', sortOrder: 4 },
+  { code: 'CLOSED', label: 'Closed', sortOrder: 5 },
+  { code: 'REOPENED', label: 'Reopened', sortOrder: 6 },
+  { code: 'REJECTED', label: 'Rejected', sortOrder: 7 },
+];
+
+async function ensureComplaintStatuses(tenantId) {
+  for (const s of STATUS_DEFS) {
+    await ComplaintStatusDefinition.findOrCreate({
+      where: { tenantId, code: s.code },
+      defaults: { label: s.label, sortOrder: s.sortOrder },
+    });
+  }
+}
+
 // Issues a real, verifiable access token for a fixture user without going
 // through an HTTP login flow — the standard shortcut used across the auth
 // integration suite (see tests/integration/rbacMiddleware.test.js) for
@@ -155,6 +230,7 @@ module.exports = {
   getOrCreateTestTenant,
   createStaffUser,
   createCitizenUser,
+  createCitizenWithProfile,
   createMfaEnrolledAdmin,
   createAdminWithoutMfa,
   getOrCreateGlobalRole,
@@ -165,4 +241,8 @@ module.exports = {
   createDepartment,
   createCategory,
   getOrCreateHierarchyLevel,
+  createWardChain,
+  getComplaintStatus,
+  ensureComplaintStatuses,
+  createSlaRule,
 };

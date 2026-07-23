@@ -4,22 +4,35 @@ Companion to `CURRENT_STATE.md` — that file says what exists; this one says
 what's next and in what order, based purely on dependency (what blocks what),
 not on any externally-communicated timeline.
 
-## Immediate next candidate: Complaint module
+## Immediate next candidate: Notification module
 
-Everything implemented so far (Auth, Geographic, Administration) exists to
-support the Complaint module — it's the only module nothing else in the
-platform can substitute for. Recommended before starting it:
+Complaint (Auth, Geographic, Administration's prerequisite) is now done — see
+`CURRENT_STATE.md`. The next module with the widest payoff is Notification: it
+retires three separate `logger.debug` dev-mode stubs at once (citizen/officer
+OTP delivery, password-reset token delivery, new-staff invite email — grep
+`dev-mode stub` across `src/services/`) and is a prerequisite for the
+Complaint module's own citizen-facing status-change notifications, which
+don't exist yet (Complaint only writes `audit_log`/timeline entries today, it
+never notifies the citizen). Recommended before starting it:
 
 1. Confirm scope the same way this project has for every prior module: read
-   `docs/API_SPECIFICATION.md` §4, the relevant numbered API doc, and
-   `docs/complaint.yaml` (or equivalent path file) in full before writing any
-   code, and cross-check every referenced database entity against
-   `docs/DATABASE_DESIGN.md` §1-25 (v1.0, approved) — flag anything that turns
-   out to depend on §26-34 (v1.1, pending) the same way Geographic did.
-2. The Complaint module is also where `/api/v1/complaints/nearby`
-   (`geoNearbyComplaints`, declared in `geographic.yaml`) belongs — wire it
-   into `complaint.routes.js` when that file is built, not into
-   `geo.routes.js`.
+   `docs/API_SPECIFICATION.md` (Notification section), `docs/08-Notification-APIs.md`,
+   and `docs/notification.yaml` in full before writing any code, and
+   cross-check every referenced database entity against
+   `docs/DATABASE_DESIGN.md` §1-25 (v1.0, approved).
+2. `provider_config` already has SMS/WhatsApp/Email rows seeded (see
+   Administration's Provider Configuration) — the Notification module is what
+   finally consumes them; check `src/services/admin.service.js`'s Provider
+   read/activate paths for the existing shape before adding a new one.
+
+## Needs a spec decision before it can be closed out
+
+- **Complaint tracking-ID / department-code format conflict**
+  (`docs/complaint.yaml`'s `trackingId` pattern vs `docs/administration.yaml`'s
+  department `code` validator — see `CURRENT_STATE.md`'s "Known limitations").
+  A department code containing a digit currently produces a tracking ID that
+  the Complaint module's own tracking endpoint would reject as malformed. Needs
+  one spec changed to match the other, not a code-only fix.
 
 ## Blocked on client approval (`DATABASE_DESIGN.md` §36)
 

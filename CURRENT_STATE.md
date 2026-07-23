@@ -17,15 +17,13 @@ for that) and it is not a substitute for reading the approved specs in `docs/`.
 | Authentication & Authorization | ✅ Done | `docs/authentication.yaml`, `docs/14-API-Security.md` | All 11 operations: citizen OTP, officer password+OTP, admin password+TOTP-MFA, refresh rotation, logout, forgot/reset password, token validate. RBAC middleware (`authenticate`, `optionalAuthenticate`, `requireRole`, `requirePermission`, `requireTenant`) built here and reused by every module since. |
 | Geographic | ✅ Done (partial by design) | `docs/geographic.yaml`, `docs/07-Geographic-APIs.md` | District/Zone/Ward: real, full CRUD. State/Corporation/Region/Division/Street/Locality/GIS/Map/Geocoding/Heatmap/Analytics/Boundaries: routes exist, RBAC-gated, Swagger-documented, but respond per the spec's own degradation contract (empty list / 404 / `501 NOT_ENABLED`) because their backing v1.1 entities aren't approved yet. `/api/v1/complaints/nearby` is declared in `geographic.yaml` but mounted under the Complaint module — not wired up (Complaint module doesn't exist yet). |
 | Administration | ✅ Done | `docs/administration.yaml`, `docs/06-Administration-APIs.md` | All 43 operations: Department, Complaint Category, User (Officer/Admin provisioning with privilege-escalation guards), Role, Permission (read-only), Approval Workflow / SLA Rule / Escalation Rule (versioned config, per `DATABASE_DESIGN.md` §22), Tenant Configuration (partial — see limitations), Feature Flags, Providers. |
+| Complaint | ✅ Done | `docs/complaint.yaml`, `docs/API_SPECIFICATION.md` §4 | All 13 operations: Register, Register Voice (stubbed `501 NOT_ENABLED` — no AI/Voice module yet), Upload Attachment (magic-byte file-type validation, max 5 per complaint), Update, Details, Timeline, Tracking (by trackingId), List (officer/admin queue, cursor-paginated, department-scoped), Assignment (with reassignment history and out-of-scope-officer guard), Resolution, Closure, Citizen Feedback, Reopen. Idempotency-key middleware on Register/Voice/Feedback. `/api/v1/complaints/nearby` (declared in `geographic.yaml`) intentionally not wired here — it depends on the still-unapproved Geographic v1.1 GIS entities. |
 
 ## Pending modules
 
 Everything below is still the Phase-1 scaffold placeholder (`module.exports = {}` /
 an empty `Router()`) — no business logic, no routes wired up:
 
-- **Complaint** (`docs/complaint.yaml` / `docs/API_SPECIFICATION.md` §4) — the
-  core citizen-facing grievance-filing and lifecycle module. Nothing else in the
-  platform is usable end-to-end without this.
 - **AI** (`docs/API_SPECIFICATION.md` §5) — Complaint/Officer/Analytics/Voice
   Agents, Claude integration, PII masking pipeline.
 - **Notification** (`docs/08-Notification-APIs.md`) — SMS/WhatsApp/Email/Push
@@ -102,6 +100,19 @@ instead.
   Fixed in `src/seeders/20260101010012-seed-system-configuration.js` (now
   `email`) and corrected in the dev database; flagging here in case any
   external reference to the old value exists.
+- **`docs/complaint.yaml`'s `trackingId` path pattern (`^[A-Z]{2,10}-[A-Z]{2,10}-\d{6}-\d{6}$`)
+  disagrees with `docs/administration.yaml`'s department `code` validator
+  (`^[A-Z0-9]{2,10}$`, alphanumeric)**: `src/utils/trackingId.js` builds the
+  tracking ID's department segment directly from `department.code`, so any
+  tenant that provisions a department code containing a digit (e.g. `DEPT01`,
+  a valid administration.yaml code today) will mint a tracking ID that the
+  Complaint module's own `GET /complaints/track/:trackingId` validator then
+  rejects as malformed (`400`). Not fixed unilaterally in either direction —
+  needs a spec decision (loosen the tracking-ID pattern, or restrict
+  department codes to letters-only) rather than a silent code change.
+  `tests/integration/complaintLifecycle.test.js` works around it by using a
+  letters-only department code fixture, faithfully exercising the documented
+  pattern rather than the conflict.
 - **No live Redis or Docker in this development environment** — integration
   tests substitute `ioredis-mock` (fully in-process, no network dependency);
   manual/live verification of Redis-touching endpoints against the running dev
@@ -116,9 +127,17 @@ instead.
 
 ## Test suite
 
-148 Jest tests passing (unit + integration, via `npm test` in `backend/`) as of
-this writing — see `backend/tests/`. Integration tests run against a real,
-migrated `grievance_platform_test` MySQL database and `ioredis-mock`.
+198 Jest tests passing (unit + integration, via `npm test` in `backend/`) as of
+this writing (2026-07-23) — see `backend/tests/`. Integration tests run against
+a real, migrated `grievance_platform_test` MySQL database and `ioredis-mock`.
+Note: `tests/integration/complaintLifecycle.test.js` creates its own tenant
+(`CMPLNTTEST`, `status: 'active'`) rather than reusing the shared `TEST_AUTH`
+fixture tenant, and deactivates it in `afterAll` — without that, a second
+active tenant coexisting with `TEST_AUTH` trips
+`auth.service.js#resolveSingleActiveTenant`'s "exactly one active tenant"
+Phase-1 assumption for whichever of `citizenAuth.test.js` /
+`tokenRefreshLogout.test.js` Jest happens to schedule afterward (file
+scheduling is size-based, not alphabetical, when there's no timing cache).
 
 ## Documentation status correction (2026-07-21)
 

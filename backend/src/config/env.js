@@ -111,6 +111,20 @@ const env = {
     maxFileSizeBytes: num('UPLOAD_MAX_FILE_SIZE_BYTES', 10 * 1024 * 1024),
   },
 
+  complaint: {
+    // SRS §8.2: image attachments ≤5 MB, ≤5 files/complaint; voice notes
+    // ≤10 MB. Reopen window is "an Admin-configurable value, e.g. 7 days"
+    // (API_SPECIFICATION.md §4.13) — the approved v1.0 schema has no
+    // tenant_config column to back a real per-tenant override (the same
+    // gap documented against Administration's Tenant Configuration
+    // endpoint), so this is a platform-wide default, not a fabricated
+    // per-tenant setting.
+    maxAttachmentSizeBytes: num('COMPLAINT_MAX_ATTACHMENT_SIZE_BYTES', 5 * 1024 * 1024),
+    maxAttachmentsPerComplaint: num('COMPLAINT_MAX_ATTACHMENTS', 5),
+    maxVoiceFileSizeBytes: num('COMPLAINT_MAX_VOICE_FILE_SIZE_BYTES', 10 * 1024 * 1024),
+    reopenWindowDays: num('COMPLAINT_REOPEN_WINDOW_DAYS', 7),
+  },
+
   swagger: {
     enabled: bool('SWAGGER_ENABLED', true),
     route: str('SWAGGER_ROUTE', '/api-docs'),
