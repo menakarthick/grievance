@@ -20,6 +20,8 @@ const {
   Ward,
   ComplaintStatusDefinition,
   SlaRuleConfig,
+  NotificationTemplateConfig,
+  ProviderConfig,
 } = require('../../../src/models');
 const { hashPassword } = require('../../../src/utils/password');
 const tokenService = require('../../../src/services/token.service');
@@ -209,6 +211,25 @@ async function ensureComplaintStatuses(tenantId) {
   }
 }
 
+// npm test's pretest only runs migrations, not seeders (package.json) — the
+// Notification test suite creates its own template rows directly, the same
+// pattern ensureComplaintStatuses already established for
+// complaint_status_definition.
+async function createNotificationTemplate({ tenantId, eventType, channel, language = 'en', bodyTemplate, version = 1 }) {
+  return NotificationTemplateConfig.create({ tenantId, eventType, channel, language, bodyTemplate, version });
+}
+
+async function createProviderConfig({ tenantId, providerType, providerName, isActive = true }) {
+  const suffix = uniqueSuffix();
+  return ProviderConfig.create({
+    tenantId,
+    providerType,
+    providerName: providerName || `provider_${suffix}`,
+    secretReference: `secrets/test/${providerType}-${suffix}`,
+    isActive,
+  });
+}
+
 // Issues a real, verifiable access token for a fixture user without going
 // through an HTTP login flow — the standard shortcut used across the auth
 // integration suite (see tests/integration/rbacMiddleware.test.js) for
@@ -245,4 +266,6 @@ module.exports = {
   getComplaintStatus,
   ensureComplaintStatuses,
   createSlaRule,
+  createNotificationTemplate,
+  createProviderConfig,
 };

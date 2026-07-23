@@ -21,6 +21,27 @@ module.exports = (sequelize, DataTypes) => {
       payloadSummary: {
         type: DataTypes.JSON,
         allowNull: true,
+        // The already-migrated column (20260101000040-create-notification-
+        // event.js) physically ended up as MySQL longtext rather than a
+        // native JSON column in this environment (verified via DESCRIBE),
+        // so mysql2/Sequelize doesn't auto-parse it back into an object on
+        // read the way DataTypes.JSON normally would — a fresh SELECT
+        // returns the raw JSON *string*. Complaint (the only prior writer)
+        // never read this field back structurally, so this never surfaced
+        // until the Notification module's domain-event consumer needed to.
+        // Fixed at the application layer (a read-side getter only — the
+        // write side already serializes correctly via Sequelize's own JSON
+        // type handling; verified by inspecting the raw stored value), not
+        // by altering the already-approved table's column type.
+        get() {
+          const raw = this.getDataValue('payloadSummary');
+          if (typeof raw !== 'string') return raw;
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return raw;
+          }
+        },
       },
     },
     {

@@ -35,7 +35,12 @@ router.use('/ai', aiRoutes);
 // /api/v1) — mounted at the router root, not under /admin.
 router.use(adminRoutes);
 router.use('/geo', geoRoutes);
-router.use('/notifications', notificationRoutes);
+// Notification resources have no single common path prefix in the approved
+// contract (docs/notification.yaml: /notifications/*,
+// /notification-templates, /notification-preferences,
+// /notification-providers all sit directly under /api/v1) — mounted at the
+// router root, same pattern as Administration above.
+router.use(notificationRoutes);
 router.use('/reports', reportRoutes);
 router.use('/audit', auditRoutes);
 router.use('/files', fileRoutes);

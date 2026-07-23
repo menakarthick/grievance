@@ -125,6 +125,17 @@ const env = {
     reopenWindowDays: num('COMPLAINT_REOPEN_WINDOW_DAYS', 7),
   },
 
+  notification: {
+    // ARCHITECTURE.md §10.3: "3 attempts: 30s / 2min / 10min" is the
+    // documented illustrative backoff; src/queues/index.js's already-
+    // approved defaultJobOptions (attempts: 3, exponential 5000ms base)
+    // predates this module and is reused as-is rather than re-tuned here.
+    maxRetryAttempts: num('NOTIFICATION_MAX_RETRY_ATTEMPTS', 3),
+    bulkMaxRecipients: num('NOTIFICATION_BULK_MAX_RECIPIENTS', 5000),
+    bulkRetryMaxMatches: num('NOTIFICATION_BULK_RETRY_MAX_MATCHES', 10000),
+    testSendAllowlist: list('NOTIFICATION_TEST_SEND_ALLOWLIST', []),
+  },
+
   swagger: {
     enabled: bool('SWAGGER_ENABLED', true),
     route: str('SWAGGER_ROUTE', '/api-docs'),

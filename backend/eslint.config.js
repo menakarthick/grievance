@@ -22,10 +22,10 @@ module.exports = [
     },
   },
   {
-    // server.js is the process entrypoint — process.exit() on fatal
+    // server.js/worker.js are process entrypoints — process.exit() on fatal
     // startup errors and after graceful shutdown is the correct pattern,
     // not a code smell the rule is meant to catch.
-    files: ['server.js'],
+    files: ['server.js', 'worker.js'],
     rules: { 'n/no-process-exit': 'off' },
   },
   {

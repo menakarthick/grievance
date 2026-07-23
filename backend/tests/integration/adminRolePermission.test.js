@@ -6,6 +6,7 @@ const { sequelize } = require('../../src/config/database');
 const { redisClient } = require('../../src/config/redis');
 const {
   getOrCreatePermission,
+  getOrCreateGlobalRole,
   getOrCreateTestTenant,
   createStaffUser,
   uniqueSuffix,
@@ -25,6 +26,16 @@ describe('Administration — Role & Permission (docs/06-Administration-APIs.md �
     const { user: officer } = await createStaffUser({ tenantId: tenant.id, userType: 'officer' });
     officerToken = await tokenFor(officer, ['officer']);
     permission = await getOrCreatePermission('complaint', 'read');
+    // This suite's own "list roles includes the officer system role" and
+    // "a system role cannot be edited" tests expect the global 'officer'
+    // role (tenantId: null) to already exist. It's created via
+    // getOrCreateGlobalRole by adminUser.test.js/rbacMiddleware.test.js —
+    // relying on cross-file execution order for that is fragile (Jest
+    // schedules integration files largest-first when there's no timing
+    // cache, so the order isn't guaranteed run to run). Ensured here too,
+    // idempotently, so this file doesn't depend on another file having run
+    // first.
+    await getOrCreateGlobalRole('officer');
   });
 
   afterAll(async () => {
