@@ -4,19 +4,28 @@ Companion to `CURRENT_STATE.md` — that file says what exists; this one says
 what's next and in what order, based purely on dependency (what blocks what),
 not on any externally-communicated timeline.
 
-## Immediate next candidate: wire Notification into existing dev-mode stubs, then Reports/Audit/File Management
+## Immediate next candidate: Reports or Audit read API, then wire up existing dev-mode stubs
 
-Complaint and Notification are both done — see `CURRENT_STATE.md`. Two
-independent threads are now unblocked:
+Complaint, Notification, and File Management are all done — see
+`CURRENT_STATE.md`. Remaining threads:
 
-1. **Replace the three `logger.debug` dev-mode stubs** (citizen/officer OTP
+1. **Reports** (`docs/09-Reports-APIs.md`) and **Audit read API**
+   (`docs/10-Audit-APIs.md`) are the two remaining fully-unbuilt modules.
+   Either would retire a 501 elsewhere: Notification's History Export
+   (`GET /notifications/history/export`) and File Management's own
+   `resource_share`-adjacent async patterns were both documented as
+   depending on Reports' export/signed-URL infrastructure once it exists.
+   Reports is also the natural home for `resource_share` itself, if/when
+   that table is approved (see "Needs a spec decision" below) — it was
+   first introduced in `09-Reports-APIs.md` §9.1.1.
+2. **Replace the three `logger.debug` dev-mode stubs** (citizen/officer OTP
    delivery, password-reset token delivery, new-staff invite email — grep
    `dev-mode stub` across `src/services/`) with real calls into
    `src/services/notification.service.js`'s dispatch functions. Not done as
    part of the Notification module itself (out of scope for "implement ONLY
    the Notification module"); Auth/Administration's service files are
    untouched.
-2. **Give Complaint citizen-facing notifications a real channel**: Complaint
+3. **Give Complaint citizen-facing notifications a real channel**: Complaint
    already publishes the domain events (`ComplaintCreated` etc. into
    `notification_event`) and Notification already consumes them
    (`src/services/notification.service.js#consumeDomainEvents`, run via
@@ -24,13 +33,12 @@ independent threads are now unblocked:
    production tenants beyond `TAMBARAM`'s `src/seeders/20260101010014-seed-notification-templates-complaint-events.js`.
    Confirm this is sufficient, or extend it, before relying on it for a real
    citizen-facing rollout.
-3. Reports (`docs/09-Reports-APIs.md`), Audit read API
-   (`docs/10-Audit-APIs.md`), and File Management
-   (`docs/11-File-Management-APIs.md`) remain the three fully-unbuilt
-   modules — Notification's own History Export (`GET
-   /notifications/history/export`) and Broadcast/Bulk's async-job patterns
-   would benefit from whichever of these lands first (shared
-   export/signed-URL infrastructure).
+4. **Wire a real virus scanner behind File Management's hook**
+   (`src/services/file.service.js#runVirusScanHook`) once one is
+   provisioned (ClamAV or equivalent, `ARCHITECTURE.md` §19.2) — currently
+   a placeholder that always reports `clean`, immediately, so every other
+   documented lifecycle transition (quarantine → hot, downloadable once
+   clean) is genuinely exercisable in this codebase.
 
 ## Needs a spec decision before it can be closed out
 
@@ -49,6 +57,19 @@ independent threads are now unblocked:
 - **`notification.yaml` vs `administration.yaml` provider-type enum conflict**:
   `push` is a valid notification provider type in one document, not the
   other (see `CURRENT_STATE.md`). Needs one spec changed to match the other.
+- **`file_asset_metadata` (DATABASE_DESIGN.md §30) and `resource_share`
+  (v1.2-proposed) don't exist** — File Metadata's rich fields, File
+  Versioning's chain, and all of File Sharing/Access Control's writes are
+  degraded pending these tables (see `CURRENT_STATE.md`'s File Management
+  entry for exactly what degrades and how). Larger scope than most other
+  gaps here — worth scoping as its own approval request rather than folding
+  into a general "add missing columns" pass.
+- **`file_asset` has no `deleted_at` column** despite
+  `11-File-Management-APIs.md` §11.13.1 documenting soft-delete via
+  `deleted_at` — `deleted_by` (which does exist) is used as the deletion
+  marker instead (see `CURRENT_STATE.md`). Low urgency: functionally
+  equivalent for every current use case, but worth reconciling with the doc
+  text the next time `file_asset` gets any other schema attention.
 
 ## Blocked on client approval (`DATABASE_DESIGN.md` §36)
 

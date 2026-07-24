@@ -19,6 +19,7 @@ for that) and it is not a substitute for reading the approved specs in `docs/`.
 | Administration | ✅ Done | `docs/administration.yaml`, `docs/06-Administration-APIs.md` | All 43 operations: Department, Complaint Category, User (Officer/Admin provisioning with privilege-escalation guards), Role, Permission (read-only), Approval Workflow / SLA Rule / Escalation Rule (versioned config, per `DATABASE_DESIGN.md` §22), Tenant Configuration (partial — see limitations), Feature Flags, Providers. |
 | Complaint | ✅ Done | `docs/complaint.yaml`, `docs/API_SPECIFICATION.md` §4 | All 13 operations: Register, Register Voice (stubbed `501 NOT_ENABLED` — no AI/Voice module yet), Upload Attachment (magic-byte file-type validation, max 5 per complaint), Update, Details, Timeline, Tracking (by trackingId), List (officer/admin queue, cursor-paginated, department-scoped), Assignment (with reassignment history and out-of-scope-officer guard), Resolution, Closure, Citizen Feedback, Reopen. Idempotency-key middleware on Register/Voice/Feedback. `/api/v1/complaints/nearby` (declared in `geographic.yaml`) intentionally not wired here — it depends on the still-unapproved Geographic v1.1 GIS entities. |
 | Notification | ✅ Done (with documented degradations — see "Known limitations") | `docs/notification.yaml`, `docs/08-Notification-APIs.md` | All ~60 operations across all 16 subsections: SMS/Email/WhatsApp/Push send+status+test-send (§8.2-8.5), In-App inbox (§8.6), Templates with versioning/preview/test-send (§8.7 — approval workflow degrades, see below), Preferences incl. Emergency Override (§8.8), Queue/Schedule/Cancel/Dead-Letter (§8.9), History incl. export (§8.10 — export degrades), Retry incl. bulk (§8.11), Provider read view (§8.12), Broadcast (§8.13, ward/zone/district/department/tenant scope resolution via the Geographic hierarchy), Bulk (§8.14), Analytics (§8.15, live-aggregated not pre-aggregated), Health (§8.16). One generic dispatch pipeline (`notification_event`→`notification_dispatch`) backs every channel-typed endpoint per §8.1.1. Mock provider adapters only (`src/providers/notification/*`) — no real SMS/Email/WhatsApp/Push gateway integrated. Consumes the Complaint module's already-published domain events (`ComplaintCreated/Assigned/Resolved/Closed/Reopened`, `CitizenFeedbackReceived`) via a BullMQ repeatable job (`src/jobs/eventConsumer.job.js`) calling the idempotent `notification.service.js#consumeDomainEvents`. Delivery itself runs on a separate BullMQ worker/PM2 process (`worker.js`, `src/jobs/notificationDispatch.job.js`), reusing the already-declared `notification-dispatch` queue (`src/queues/index.js`, retry: 3 attempts/exponential backoff). |
+| File Management | ✅ Done (with documented degradations — see "Known limitations") | `docs/file-management.yaml`, `docs/11-File-Management-APIs.md` | This task's explicit 12-item scope: Upload (magic-byte validated: image/voice/document via `src/utils/fileValidation.js`), Multipart Upload (initiate + complete; session state in Redis, no chunk-transfer endpoints exist in the approved contract), Download (HMAC-signed short-lived token, `src/utils/signedUrl.js`, streamed from local disk), Metadata (get real, update real for `assetCategory` only — see limitations), Versioning (degraded — every file is its own sole version), Sharing (degraded — 501, `resource_share` unbuilt), Access Control (degraded — read-only owner/scope view is real, grant/revoke are 501), Attachment Management / Complaint integration (Complaint's own attachment upload now delegates to this module, `src/services/complaint.service.js#uploadAttachment` → `file.service.js#uploadFile`), Search, Storage Usage, Archive & Restore, Delete (soft delete via `deletedBy`, no `deleted_at` column exists). Storage abstraction (`src/storage/`) implements only the Local File System adapter; S3/Azure Blob/MinIO are registry slots, not built. Virus scanning is a placeholder hook (`runVirusScanHook`) that always reports clean — no real ClamAV/equivalent integrated. |
 
 ## Pending modules
 
@@ -32,7 +33,6 @@ an empty `Router()`) — no business logic, no routes wired up:
   (`src/audit/index.js`, called from Auth and Administration on every
   state-changing action into `audit_log`/`auth_event_log`); only the *read/query*
   API surface for browsing that data is unbuilt.
-- **File Management** (`docs/11-File-Management-APIs.md`)
 
 ## Features intentionally deferred
 
@@ -192,6 +192,80 @@ instead.
   domain-event consumer needed to. Fixed with a read-side getter on the
   model (`src/models/notificationEvent.model.js`) — an application-layer
   fix, not a migration altering the already-approved table.
+- **`file_asset_metadata` (DATABASE_DESIGN.md §30) and `resource_share`
+  (introduced in `09-Reports-APIs.md` §9.1.1, explicitly "proposed, pending
+  Database Architecture v1.2" per `11-File-Management-APIs.md` §11.0) do not
+  exist** — neither table was ever migrated. File Metadata's
+  tags/GPS/EXIF/OCR/isAiGenerated/retentionCategory fields, File Versioning's
+  `previousVersionFileAssetId` chain, and all of File Sharing/Access Control's
+  writes depend entirely on these two tables. Implemented as honest
+  degradations rather than invented: `GET .../metadata` returns real
+  `file_asset` fields plus empty/null for everything else; `PATCH
+  .../metadata` supports only `assetCategory` and rejects `tags` (`400`,
+  not silently dropped); every file reports itself as its own sole, current
+  version (`GET .../versions`), and Restore Version always returns `409
+  VERSION_ALREADY_CURRENT`; `POST .../share-links` and both access-grant
+  write endpoints respond `501 NOT_ENABLED`; `GET .../access` is real for
+  the two access bases the doc says are "computed, not stored" (owner,
+  scope) with `explicit_grant` always empty. See `src/dtos/file.dto.js` for
+  every specific field-level note.
+- **`file_asset` has no `deleted_at` column** (`paranoid: false` in the
+  model, confirmed against the migration) despite
+  `11-File-Management-APIs.md` §11.13.1 documenting deletion as "soft-delete
+  only — `deleted_at` set." `deleted_by` (`src/database/helpers.js#deletedByColumn`)
+  *does* exist and is explicitly commented as the soft-delete marker for
+  exactly this non-paranoid table — used as the deletion flag instead
+  (`deletedBy IS NULL` gates every "active file" query,
+  `src/repositories/file.repository.js`), with `updatedAt` standing in for
+  `deletedAt` in responses (the update that sets `deletedBy` is itself the
+  deletion moment).
+- **`src/database/constants.js`'s `FILE_ASSET_CATEGORIES` (`image`, `voice`,
+  `document`, `audit_attachment`) is narrower than `11-File-Management-APIs.md`'s
+  illustrative "images, PDFs, Office documents, audio, video..." list** —
+  only these four values are accepted; `document`/`audit_attachment` are
+  validated as genuine PDF via magic bytes (`src/utils/fileValidation.js#detectDocumentMimeType`),
+  not the broader Office-document family.
+- **`notification.yaml`'s provider `providerType` enum includes `push`, but
+  `provider_config`'s approved enum (`administration.yaml` §6.11) doesn't** —
+  documented under Notification above; File Management's own provider
+  concept (storage adapters) is unaffected, this is listed here only because
+  it's the same class of cross-document enum mismatch.
+- **A real routing bug found and fixed while building File Management**:
+  `adminRoutes`/`notificationRoutes` are mounted at the v1 router *root*
+  (`router.use(adminRoutes)`, no path prefix — both modules' approved
+  contracts have "no common path prefix"). Each applies its own blanket
+  `authenticate()`/`requireTenant()` via a path-less `router.use()`.
+  Because Express treats a root mount as matching every request that
+  reaches that point in the stack, *any* `/api/v1/*` request — including
+  ones for entirely unrelated modules — was passing through that blanket
+  middleware first if the unrelated module's router happened to be
+  registered afterward. This was invisible until now because every
+  previously-built endpoint required authentication anyway (a missing
+  token there just meant the *intended* auth check ran a little early,
+  harmlessly). File Management's signed download-token endpoint
+  (`GET /files/download-token/:token`, intentionally unauthenticated — the
+  token itself is the credential) was the first genuinely public route,
+  and it was 401'd before ever reaching its own handler. Fixed by
+  registering every prefixed router in `src/routes/v1/index.js` before
+  either root-mounted one — not a documented-behavior change, since no
+  previously-built endpoint's actual authorization requirements shifted.
+- **A DTO-mutation lesson applied twice this phase**: Sequelize's
+  `instance.update()` mutates the in-memory instance's own attributes once
+  the write resolves. `src/services/file.service.js`'s virus-scan hook
+  (a synchronous placeholder — see the module row above) calls `update()`
+  on the just-created `file_asset` row before the HTTP response is shaped,
+  so reading `fileAsset.virusScanStatus`/`lifecycleState` at that point
+  would leak the hook's *already-completed* result into a response the
+  OpenAPI schema constrains to always report the pre-scan
+  `pending`/`quarantine` state (`FileUploadAck`). Both
+  `src/dtos/file.dto.js#shapeUploadAck` and `src/dtos/complaint.dto.js#shapeAttachment`
+  (Complaint's own attachment endpoint now delegates to this same upload
+  path) hardcode those two fields instead of reading them off the mutated
+  instance. The identical mutate-then-reread mistake was also caught (and
+  fixed the same way, capturing the pre-update value in a local variable)
+  in `notification.service.js#retryNotification` during the Notification
+  module's own build — worth knowing as a recurring Sequelize footgun in
+  this codebase, not a one-off.
 - **No live Redis or Docker in this development environment** — integration
   tests substitute `ioredis-mock` (fully in-process, no network dependency);
   manual/live verification of Redis-touching endpoints against the running dev
@@ -218,11 +292,12 @@ instead.
 
 ## Test suite
 
-243 Jest tests passing (unit + integration, via `npm test` in `backend/`) as of
-this writing (2026-07-23) — see `backend/tests/`. Integration tests run against
+277 Jest tests passing (unit + integration, via `npm test` in `backend/`) as of
+this writing (2026-07-24) — see `backend/tests/`. Integration tests run against
 a real, migrated `grievance_platform_test` MySQL database and `ioredis-mock`.
-Note: both `tests/integration/complaintLifecycle.test.js` and
-`tests/integration/notificationLifecycle.test.js` create their own tenant
+Note: `tests/integration/complaintLifecycle.test.js`,
+`tests/integration/notificationLifecycle.test.js`, and
+`tests/integration/fileManagementLifecycle.test.js` each create their own tenant
 (`status: 'active'`) rather than reusing the shared `TEST_AUTH` fixture
 tenant, and deactivate it in `afterAll` — without that, a second active
 tenant coexisting with `TEST_AUTH` trips

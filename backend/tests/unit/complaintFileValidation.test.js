@@ -1,6 +1,11 @@
 'use strict';
 
-const { detectImageMimeType, detectAudioMimeType, extensionMatchesMimeType } = require('../../src/utils/fileValidation');
+const {
+  detectImageMimeType,
+  detectAudioMimeType,
+  detectDocumentMimeType,
+  extensionMatchesMimeType,
+} = require('../../src/utils/fileValidation');
 
 describe('utils/fileValidation', () => {
   test('detects JPEG, PNG, and WEBP by magic bytes', () => {
@@ -37,5 +42,13 @@ describe('utils/fileValidation', () => {
     expect(extensionMatchesMimeType('photo.jpg', 'image/jpeg')).toBe(true);
     expect(extensionMatchesMimeType('photo.png', 'image/jpeg')).toBe(false);
     expect(extensionMatchesMimeType('photo.webp', 'image/webp')).toBe(true);
+  });
+
+  test('detects PDF by magic bytes (File Management module document category)', () => {
+    expect(detectDocumentMimeType(Buffer.concat([Buffer.from('%PDF-1.4'), Buffer.alloc(8)]))).toBe('application/pdf');
+  });
+
+  test('rejects a non-PDF buffer for the document category', () => {
+    expect(detectDocumentMimeType(Buffer.from('this is not a pdf'))).toBeNull();
   });
 });

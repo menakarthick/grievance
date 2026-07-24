@@ -136,6 +136,36 @@ const env = {
     testSendAllowlist: list('NOTIFICATION_TEST_SEND_ALLOWLIST', []),
   },
 
+  storage: {
+    // ARCHITECTURE.md §19.3: local disk is the Phase-1 constraint; the
+    // storage layer (src/storage/) is written so switching this to
+    // 's3'/'azureBlob'/'minio' later is an adapter swap, not an
+    // application change — those adapters aren't implemented yet.
+    provider: str('STORAGE_PROVIDER', 'local'),
+    // Outside any Express-served static root (§19.1's "outside webroot") —
+    // never resolve this path via a public URL; the only access path is
+    // the signed-download-token endpoint.
+    rootDir: str('STORAGE_ROOT_DIR', 'storage/files'),
+  },
+
+  file: {
+    // FILE_ASSET_CATEGORIES (src/database/constants.js) is narrower than
+    // this doc section's illustrative "images, PDFs, Office documents,
+    // audio, video..." list — only image/voice/document/audit_attachment
+    // are approved values; size ceilings are per-category accordingly.
+    maxImageSizeBytes: num('FILE_MAX_IMAGE_SIZE_BYTES', 5 * 1024 * 1024),
+    maxVoiceSizeBytes: num('FILE_MAX_VOICE_SIZE_BYTES', 10 * 1024 * 1024),
+    maxDocumentSizeBytes: num('FILE_MAX_DOCUMENT_SIZE_BYTES', 10 * 1024 * 1024),
+    maxFilesPerEntity: num('FILE_MAX_PER_ENTITY', 10),
+    downloadUrlTtlSeconds: num('FILE_DOWNLOAD_URL_TTL_SECONDS', 5 * 60),
+    // HMAC signing key for short-lived download tokens (SRS §8.2 "signed
+    // short-lived URL access") — a dev-mode placeholder default, the same
+    // pattern already accepted for provider_config.secret_reference
+    // (CURRENT_STATE.md); must be a real secret in production.
+    downloadSecret: str('FILE_DOWNLOAD_SECRET', 'dev-only-file-download-secret-change-me'),
+    quotaBytes: num('FILE_TENANT_QUOTA_BYTES', 0) || null,
+  },
+
   swagger: {
     enabled: bool('SWAGGER_ENABLED', true),
     route: str('SWAGGER_ROUTE', '/api-docs'),

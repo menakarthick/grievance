@@ -6,19 +6,17 @@
 // repository/DTO for category/department lookups and the priority
 // integer<->string mapping (Complaint uses the identical convention as
 // complaint_category.default_priority — see src/dtos/admin.dto.js).
-const crypto = require('crypto');
-const fs = require('fs/promises');
-const path = require('path');
 const { Op } = require('sequelize');
 const { ApiError } = require('../utils/apiError');
 const env = require('../config/env');
 const { recordAuditLog } = require('../audit');
 const { buildTrackingId } = require('../utils/trackingId');
-const { detectImageMimeType, detectAudioMimeType } = require('../utils/fileValidation');
+const { detectAudioMimeType } = require('../utils/fileValidation');
 const { decodeCursor, buildPaginationMeta } = require('../utils/cursorPagination');
 const { priorityToInt } = require('../dtos/admin.dto');
 const { findActiveCategory, findActiveDepartment } = require('../repositories/admin.repository');
 const repo = require('../repositories/complaint.repository');
+const fileService = require('./file.service');
 const { CitizenProfile, Tenant, StaffProfile } = require('../models');
 const dto = require('../dtos/complaint.dto');
 
@@ -297,6 +295,14 @@ async function registerVoice(user, audioFile) {
 }
 
 // --- 4.3 Upload Complaint Attachment -----------------------------------------
+// Delegates the actual upload (magic-byte validation, storage write,
+// file_asset row, virus-scan hook) to the File Management module
+// (src/services/file.service.js) — this task's explicit "Complaint
+// attachments must use this File Management service" integration
+// requirement. Complaint keeps only what's genuinely its own business
+// rule: existence/access, the complaint-specific 5-per-complaint ceiling
+// (stricter than File Management's generic per-entity ceiling), and its
+// own audit trail entry.
 async function uploadAttachment(user, complaintId, file, assetCategory) {
   const tenantId = await tenantIdOf(user);
   const complaint = await loadComplaintOr404(tenantId, complaintId);
@@ -313,25 +319,6 @@ async function uploadAttachment(user, complaintId, file, assetCategory) {
     ]);
   }
 
-  if (file.size > env.complaint.maxAttachmentSizeBytes) {
-    throw new ApiError({
-      statusCode: 413,
-      category: 'validation',
-      code: 'FILE_TOO_LARGE',
-      message: `File exceeds the ${env.complaint.maxAttachmentSizeBytes} byte limit.`,
-    });
-  }
-
-  const mimeType = detectImageMimeType(file.buffer);
-  if (!mimeType) {
-    throw new ApiError({
-      statusCode: 415,
-      category: 'validation',
-      code: 'UNSUPPORTED_MEDIA_TYPE',
-      message: 'File must be a genuine JPEG, PNG, or WEBP image (magic-byte verified).',
-    });
-  }
-
   const attachmentCount = await repo.countAttachments(complaint.id);
   if (attachmentCount >= env.complaint.maxAttachmentsPerComplaint) {
     throw ApiError.unprocessable(
@@ -340,31 +327,11 @@ async function uploadAttachment(user, complaintId, file, assetCategory) {
     );
   }
 
-  const extension = mimeType === 'image/jpeg' ? '.jpg' : mimeType === 'image/png' ? '.png' : '.webp';
-  const storageFilename = `${crypto.randomUUID()}${extension}`;
-  const storageDir = path.join(process.cwd(), env.upload.tmpDir);
-  await fs.mkdir(storageDir, { recursive: true });
-  const storagePath = path.join(storageDir, storageFilename);
-  await fs.writeFile(storagePath, file.buffer);
-
-  const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
-  const retentionYears = assetCategory === 'voice' ? 5 : 10;
-  const retentionExpiresAt = new Date();
-  retentionExpiresAt.setFullYear(retentionExpiresAt.getFullYear() + retentionYears);
-
-  const fileAsset = await repo.createFileAsset({
-    tenantId,
+  const fileAsset = await fileService.uploadFile(user, {
+    buffer: file.buffer,
     assetCategory,
-    storagePath,
-    mimeType,
-    sizeBytes: file.size,
-    checksum,
-    uploadedBy: user.id,
-    virusScanStatus: 'pending',
-    lifecycleState: 'quarantine',
     linkedEntityType: 'complaint',
     linkedEntityId: complaint.id,
-    retentionExpiresAt,
   });
 
   await audit(user, 'COMPLAINT_ATTACHMENT_UPLOADED', complaint.id, `Uploaded file_asset ${fileAsset.id}`);

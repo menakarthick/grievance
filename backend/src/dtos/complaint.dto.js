@@ -80,7 +80,15 @@ function shapeAttachment(fileAsset) {
   return {
     fileAssetId: String(fileAsset.id),
     assetCategory: fileAsset.assetCategory,
-    virusScanStatus: fileAsset.virusScanStatus,
+    // Documented as the state immediately after upload (complaint.yaml:
+    // virusScanStatus enum: [pending]) — src/services/file.service.js's
+    // virus-scan hook (which src/services/complaint.service.js#uploadAttachment
+    // now delegates to) is a synchronous placeholder this phase and mutates
+    // the same fileAsset instance in place once it runs, so reading
+    // fileAsset.virusScanStatus here would leak that implementation detail
+    // into the documented response contract — same fix as
+    // src/dtos/file.dto.js#shapeUploadAck.
+    virusScanStatus: 'pending',
     uploadedAt: fileAsset.createdAt,
   };
 }

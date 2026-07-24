@@ -5,6 +5,9 @@ node_modules/
 logs/
 *.log
 uploads/
+# Runtime file storage root only (env.storage.rootDir) — anchored so it
+# doesn't also match the legitimate src/storage/ source directory.
+/storage/
 src/config/keys/*.pem
 coverage/
 .DS_Store

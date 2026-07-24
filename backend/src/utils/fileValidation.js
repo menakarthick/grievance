@@ -60,4 +60,15 @@ function detectAudioMimeType(buffer) {
   return null;
 }
 
-module.exports = { detectImageMimeType, detectAudioMimeType, extensionMatchesMimeType };
+// Document category (File Management module, docs/11-File-Management-APIs.md
+// §11.1.1) — src/database/constants.js#FILE_ASSET_CATEGORIES only approves
+// 'document' (not the doc's broader "PDF/Office document" illustrative
+// list), so only PDF's own magic bytes are checked here; a real Office
+// document (docx/xlsx, ZIP-container-based) is out of scope until that
+// category list is extended.
+function detectDocumentMimeType(buffer) {
+  if (bufferStartsWith(buffer, [0x25, 0x50, 0x44, 0x46])) return 'application/pdf'; // '%PDF'
+  return null;
+}
+
+module.exports = { detectImageMimeType, detectAudioMimeType, detectDocumentMimeType, extensionMatchesMimeType };
